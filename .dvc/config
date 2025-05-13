@@ -1,0 +1,5 @@
+[core]
+    remote = gdrive-storage
+['remote "gdrive-storage"']
+    url = gdrive://1nzhDztRWvKE58DYQ_D83qbA7HPUKNv5c
+    gdrive_use_service_account = false   # set true if using a JSON key
