@@ -1,5 +1,0 @@
-outs:
-- md5: a45848bbd23dcfddaaa843d3930ff64c
-  size: 4730500
-  hash: md5
-  path: instances_subset.json
