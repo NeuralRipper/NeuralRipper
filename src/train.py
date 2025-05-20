@@ -15,6 +15,8 @@ from datasets.coco import ImageDataset
 # Import custom modules
 from models.resnet18 import MyResNet18
 
+# image pre-processing
+from utils.transform import transform
 
 
 def get_data_path():
@@ -43,7 +45,7 @@ def main():
     print(f"Training with data from: {img_dir}")
 
     # Create datasets and dataloaders
-    train_dataset = ImageDataset(img_dir=img_dir, transform=transform_train)
+    train_dataset = ImageDataset(img_dir=img_dir, transform=transform)
     train_loader = DataLoader(train_dataset, batch_size=batch_size,
                               shuffle=True, num_workers=4, pin_memory=True)
 
