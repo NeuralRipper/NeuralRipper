@@ -19,7 +19,7 @@ class ImageDataset(Dataset):
         self.img_dir = img_dir
         # get all images files under image folder
         self.files = sorted([f for f in os.listdir(img_dir)
-                           if f.lower().endswith((".png", ".jpg", ".jpeg"))])
+                             if f.lower().endswith((".png", ".jpg", ".jpeg"))])
         self.transform = transform  # Pixel Normalization, Image Resize, to PyTorch Tensor, etc
 
     def __len__(self):

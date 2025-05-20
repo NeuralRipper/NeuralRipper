@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+"""
+train.py - Script to train ResNet18 on COCO dataset
+"""
+
+import os
+from datetime import datetime
+
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader
+
+from datasets.coco import ImageDataset
+# Import custom modules
+from models.resnet18 import MyResNet18
+
+
+
+def get_data_path():
+    """Get the appropriate data path based on environment variable"""
+    use_full = os.environ.get("USE_FULL_DATASET", "0").lower() in ("1", "true", "yes")
+
+    if use_full:
+        return os.path.join("data", "coco", "images", "train2017")
+    else:
+        return os.path.join("data", "coco", "subset", "images")
+
+
+def main():
+    # Set device
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
+
+    # Set hyperparameters
+    batch_size = 32
+    num_epochs = 10
+    learning_rate = 0.001
+    num_classes = 91  # COCO has 91 classes
+
+    # Get appropriate data path
+    img_dir = get_data_path()
+    print(f"Training with data from: {img_dir}")
+
+    # Create datasets and dataloaders
+    train_dataset = ImageDataset(img_dir=img_dir, transform=transform_train)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size,
+                              shuffle=True, num_workers=4, pin_memory=True)
+
+    # Initialize the model
+    model = MyResNet18(num_classes=num_classes, pretrained=True)
+    model = model.to(device)
+
+    # Define loss function and optimizer
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+
+    # Training loop
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    save_dir = os.path.join("checkpoints", timestamp)
+    os.makedirs(save_dir, exist_ok=True)
+
+    for epoch in range(num_epochs):
+        model.train()
+        running_loss = 0.0
+
+        for i, (images, _) in enumerate(train_loader):
+            # Move inputs and targets to device
+            images = images.to(device)
+
+            # Zero the parameter gradients
+            optimizer.zero_grad()
+
+            # Forward + backward + optimize
+            outputs = model(images)
+            # Note: This is a simplified training loop
+            # You'll need to load actual labels corresponding to these images
+
+            # For demonstration purposes only:
+            dummy_targets = torch.randint(0, num_classes, (images.size(0),)).to(device)
+            loss = criterion(outputs, dummy_targets)
+            loss.backward()
+            optimizer.step()
+
+            # Statistics
+            running_loss += loss.item()
+
+            if i % 10 == 9:  # Print every 10 mini-batches
+                print(f'Epoch: {epoch + 1}, Batch: {i + 1}, Loss: {running_loss / 10:.4f}')
+                running_loss = 0.0
+
+        # Save checkpoint after each epoch
+        checkpoint_path = os.path.join(save_dir, f"resnet18_epoch_{epoch + 1}.pth")
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+        }, checkpoint_path)
+        print(f"Checkpoint saved to {checkpoint_path}")
+
+
+if __name__ == "__main__":
+    main()

@@ -19,7 +19,7 @@ class MyResNet18(nn.Module):
                 If True, loads ImageNet‑pretrained weights.
                 If False, train from scratch
         """
-        super.__init__()
+        super().__init__()
         # load ResNet18 architecture
         self.backbone = torchvision.models.resnet18(
             pretrained=pretrained)  # Main feature extractor, no pretrained weights
@@ -38,4 +38,4 @@ class MyResNet18(nn.Module):
         Returns:
             torch.Tensor: Output logits of shape [B, num_classes].
         """
-        self.backbone(x)
+        return self.backbone(x)
