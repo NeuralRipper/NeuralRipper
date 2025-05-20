@@ -55,7 +55,6 @@ def main():
     parser = argparse.ArgumentParser(description='Test ResNet18 inference on COCO dataset')
     parser.add_argument('--checkpoint', required=True, help='Path to model checkpoint')
     parser.add_argument('--image', help='Path to a single image for inference')
-    parser.add_argument('--val-dir', help='Path to validation images directory')
     parser.add_argument('--ann-file', help='Path to annotation file for validation')
     parser.add_argument('--top-k', type=int, default=5, help='Show top K predictions')
     args = parser.parse_args()
@@ -82,12 +81,6 @@ def main():
     # Load categories from annotation file
     categories = load_categories(args.ann_file)
 
-    # Create dataset for category mapping if needed
-    idx2cat_id = None
-    if args.val_dir:
-        dataset = ImageDataset(img_dir=args.val_dir, ann_file=args.ann_file)
-        idx2cat_id = dataset.idx2cat_id
-
     # Single image inference
     if args.image:
         img = Image.open(args.image).convert("RGB")
@@ -97,6 +90,11 @@ def main():
             outputs = model(img_tensor)
             probabilities = torch.nn.functional.softmax(outputs, dim=1)
             top_probs, top_idxs = torch.topk(probabilities, args.top_k)
+
+        # Create a dataset just to get the category mapping
+        temp_dataset = ImageDataset(os.path.dirname(args.image),
+                                    ann_file=args.ann_file)
+        idx2cat_id = temp_dataset.idx2cat_id
 
         print(f"Top {args.top_k} predictions for {args.image}:")
         for i in range(args.top_k):

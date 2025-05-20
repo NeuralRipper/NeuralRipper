@@ -15,6 +15,10 @@ from datasets.coco import ImageDataset
 from models.resnet18 import MyResNet18
 from utils.transform import transform
 
+import aim
+from aim.pytorch import track_gradients_dists, track_params_dists
+from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_precision_score
+
 
 def get_dataset_paths():
     """Get appropriate data paths based on environment variable"""
@@ -43,8 +47,18 @@ def main():
 
     # Set hyperparameters
     batch_size = 32
-    num_epochs = 10
+    num_epochs = 15
     learning_rate = 0.001
+
+    # Initialize AIM run, tracking training progress
+    aim_run = aim.Run(experiment="ResNet18_COCO")
+    aim_run["hparams"] = {
+        "batch_size": batch_size,
+        "learning_rate": learning_rate,
+        "epochs": num_epochs,
+        "model": "ResNet18",
+        "device": device.type
+    }
 
     # Get appropriate data paths
     img_dir, ann_file = get_dataset_paths()
@@ -60,6 +74,12 @@ def main():
     model = MyResNet18(num_classes=train_dataset.num_classes, pretrained=False)
     model = model.to(device)
 
+    # Track model architecture
+    try:
+        aim_run.track_model_graph(model, input_shape=(1, 3, 480, 480))
+    except Exception as e:
+        print(f"Couldn't track model graph: {e}")
+
     # Define loss function and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
@@ -72,6 +92,12 @@ def main():
     for epoch in range(num_epochs):
         model.train()
         running_loss = 0.0
+        total = 0
+        correct = 0
+
+        # At the beginning of each epoch, collect predictions
+        all_targets = []
+        all_predictions = []
 
         for i, (images, targets) in enumerate(train_loader):
             # Move inputs and targets to device
@@ -87,12 +113,76 @@ def main():
             loss.backward()
             optimizer.step()
 
+            # Calculate accuracy
+            _, predicted = torch.max(outputs.data, 1)
+            total += targets.size(0)
+            batch_correct = (predicted == targets).sum().item()
+            correct += batch_correct
+            batch_accuracy = batch_correct / targets.size(0)
+
             # Statistics
             running_loss += loss.item()
 
+            # Log metrics to AIM
+            aim_run.track(loss.item(), name="loss", epoch=epoch, context={"subset": "train"})
+            aim_run.track(batch_accuracy, name="batch_accuracy", epoch=epoch, step=i, context={"subset": "train"})
+
             if i % 10 == 9:  # Print every 10 mini-batches
-                print(f'Epoch: {epoch + 1}, Batch: {i + 1}, Loss: {running_loss / 10:.4f}')
+                avg_loss = running_loss / 10
+                running_accuracy = correct / total
+
+                print(f'Epoch: {epoch + 1}, Batch: {i + 1}, Loss: {avg_loss:.4f}, Accuracy: {running_accuracy:.4f}')
+
+                # Track metrics every 10 batches
+                aim_run.track(avg_loss, name="avg_loss", epoch=epoch, step=i // 10, context={"subset": "train"})
+                aim_run.track(running_accuracy, name="running_accuracy", epoch=epoch, step=i // 10,
+                              context={"subset": "train"})
+
                 running_loss = 0.0
+
+            all_targets.extend(targets.cpu().numpy())
+            all_predictions.extend(outputs.softmax(dim=1).detach().cpu().numpy())
+
+        # Track distributions of gradients and parameters periodically (every 2 epochs to avoid overhead)
+        if epoch % 2 == 0:
+            try:
+                track_gradients_dists(aim_run, model)
+                track_params_dists(aim_run, model)
+            except Exception as e:
+                print(f"Couldn't track distributions: {e}")
+
+        # Track learning rate
+        current_lr = optimizer.param_groups[0]['lr']
+        aim_run.track(current_lr, name="learning_rate", epoch=epoch, context={"subset": "train"})
+
+        # Calculate epoch accuracy
+        epoch_accuracy = correct / total
+        aim_run.track(epoch_accuracy, name="epoch_accuracy", epoch=epoch, context={"subset": "train"})
+        print(f'Epoch: {epoch + 1} completed, Accuracy: {epoch_accuracy:.4f}')
+
+        # After the epoch, calculate and track metrics
+        if epoch % 1 == 0:  # Calculate every epoch or less frequently
+            # For binary classification or per-class metrics in multiclass
+            for cls in range(train_dataset.num_classes):
+                # ROC and AUC
+                fpr, tpr, _ = roc_curve(
+                    [1 if t == cls else 0 for t in all_targets],
+                    [p[cls] for p in all_predictions]
+                )
+                roc_auc = auc(fpr, tpr)
+                aim_run.track(roc_auc, name=f"roc_auc_class_{cls}", epoch=epoch)
+
+                # PR Curve
+                precision, recall, _ = precision_recall_curve(
+                    [1 if t == cls else 0 for t in all_targets],
+                    [p[cls] for p in all_predictions]
+                )
+                ap = average_precision_score(
+                    [1 if t == cls else 0 for t in all_targets],
+                    [p[cls] for p in all_predictions]
+                )
+                aim_run.track(ap, name=f"avg_precision_class_{cls}", epoch=epoch)
+
 
         # Save checkpoint after each epoch
         checkpoint_path = os.path.join(save_dir, f"resnet18_epoch_{epoch + 1}.pth")
@@ -100,6 +190,7 @@ def main():
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
+            'accuracy': epoch_accuracy
         }, checkpoint_path)
         print(f"Checkpoint saved to {checkpoint_path}")
 
