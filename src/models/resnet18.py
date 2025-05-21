@@ -9,20 +9,20 @@ class MyResNet18(nn.Module):
     num_classes: class num for the model, 91 classes(categories) for COCO dataset
     """
 
-    def __init__(self, num_classes=1000, pretrained=False):
+    def __init__(self, num_classes=1000, weights=None):
         """
         Args:
             num_classes (int):
                 Number of output channels from the final linear layer.
                 For ImageNet classification use 1000; for a custom task like COCO, 91 classes(categories)
-            pretrained (bool):
+            weights (bool):
                 If True, loads ImageNet‑pretrained weights.
                 If False, train from scratch
         """
         super().__init__()
         # load ResNet18 architecture
         self.backbone = torchvision.models.resnet18(
-            pretrained=pretrained)  # Main feature extractor, no pretrained weights
+            weights=weights)  # Main feature extractor, no pretrained weights
         # replace the final fully connected layer with new classes
         in_features = self.backbone.fc.in_features
         self.backbone.fc = nn.Linear(in_features, num_classes)
