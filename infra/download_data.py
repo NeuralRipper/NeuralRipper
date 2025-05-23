@@ -17,7 +17,7 @@ def download_from_gcs():
     use_full = os.environ.get("USE_FULL_DATASET", "0").lower() == "1"
 
     # Base directory for data
-    base_dir = os.path.join(os.getcwd(), "data", "coco")
+    base_dir = os.path.join(os.path.dirname(os.getcwd()), "data", "coco")
     os.makedirs(base_dir, exist_ok=True)
 
     print(f"Downloading {'full' if use_full else 'subset'} COCO dataset from {gcs_bucket}")
