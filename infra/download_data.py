@@ -6,6 +6,7 @@ download_coco.py - Script to download COCO dataset from Google Cloud Storage
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 
 def download_from_gcs():
@@ -16,8 +17,10 @@ def download_from_gcs():
     # Determine whether to download full dataset or subset
     use_full = os.environ.get("USE_FULL_DATASET", "0").lower() == "1"
 
+    project_root = Path.cwd().parent
+
     # Base directory for data
-    base_dir = os.path.join(os.path.dirname(os.getcwd()), "data", "coco")
+    base_dir = os.path.join(project_root, "data", "coco")
     os.makedirs(base_dir, exist_ok=True)
 
     print(f"Downloading {'full' if use_full else 'subset'} COCO dataset from {gcs_bucket}")
