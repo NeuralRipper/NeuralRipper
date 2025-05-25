@@ -17,8 +17,8 @@ class RunHandler:
         return [
             RunResponse(
                 data=RunData(
-                    metrics=r.data.metrics,
-                    params=r.data.params
+                    metrics=r.data.metrics,     # direct assignment of dict to BaseModel
+                    params=r.data.params        # direct assignment of dict to BaseModel
                 ),
                 info=RunInfo(
                     artifact_uri=r.info.artifact_uri,
