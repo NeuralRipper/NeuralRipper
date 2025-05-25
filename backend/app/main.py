@@ -1,7 +1,7 @@
 from fastapi import FastAPI
-from routers import experiment
+from backend.app.routers import experiment_router
 app = FastAPI()
-app.include_router(models.router)
+app.include_router(experiment_router.router)
 
 
 @app.get("/")
