@@ -10,7 +10,7 @@ from backend.app.handlers.experiment_handler import ExperimentHandler
 exp_handler = ExperimentHandler()
 
 # tags for auto doc grouping
-router = APIRouter(prefix="/experiments", tags=["experiments"])
+router = APIRouter(prefix="/experiments", tags=["experiment"])
 
 
 @router.get("/")
