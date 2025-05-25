@@ -27,6 +27,5 @@ class ExperimentHandler:
             for exp in exp_ls
         ]
 
-    def get_experiment_by_id(self):
-        # TODO: get exp by id
-        pass
+    def get_experiment_by_id(self, eid):
+        return self.__client.get_experiment(experiment_id=eid)

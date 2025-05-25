@@ -19,8 +19,7 @@ async def list_experiments():
     return exp_handler.get_experiment_list()
 
 
-@router.get("/{experiment_id}/runs")
-async def list_runs():
-    """Get all runs for this experiment"""
-    # TODO
-    pass
+@router.get("/{eid}")
+async def get_experiment_by_id(eid: str):
+    """Get experiment by eid"""
+    return exp_handler.get_experiment_by_id(eid=eid)
