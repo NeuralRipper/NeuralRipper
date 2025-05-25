@@ -35,3 +35,6 @@ class RunHandler:
             )
             for r in run_ls
         ]
+
+    def get_run_by_id(self, rid):
+        return self.__client.get_run(run_id=rid)
