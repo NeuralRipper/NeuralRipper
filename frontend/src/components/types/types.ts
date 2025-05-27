@@ -6,19 +6,34 @@ export interface Experiment {
     artifact_location: string;
     lifecycle_stage: string;
     tags: string[] | Record<string, never>;
-    creation_time: string;
-    last_update_time: string;
+    creation_time: number;
+    last_update_time: number;
 }
 
+// Backend response structure - matches RunResponse from FastApi
+// Dynamic key value pairs, no capturing if None
+export interface RunInfo {
+    artifact_uri?: string;
+    end_time?: number;
+    experiment_id?: string;
+    lifecycle_stage?: string;
+    run_id?: string;
+    run_name?: string;
+    run_uuid?: string;
+    start_time?: number;
+    status?: string;
+    user_id?: string;
+}
+
+export interface RunData {
+    metrics?: Record<string, never>;
+    params?: Record<string, never>;
+}
+
+// Nested object structure
 export interface Run {
-    id: string;
-    experiment_id: string;
-    name: string;
-    status: string;
-    start_time: string;
-    end_time?: string;
-    metrics?: Record<string, any>;
-    parameters?: Record<string, any>;
+    data?: RunData;
+    info?: RunInfo;
 }
 
 export interface ExperimentCardProps {

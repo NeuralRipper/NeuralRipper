@@ -1,12 +1,12 @@
-import { useEffect, useState } from "react";
+import {useEffect, useState} from "react";
 import RunCard from "./RunCard";
-import type { Run } from '../types/types.ts';
+import type {Run} from '../types/types.ts';
 
 interface RunListProps {
     experimentId: string;
 }
 
-const RunList: React.FC<RunListProps> = ({ experimentId }) => {
+const RunList: React.FC<RunListProps> = ({experimentId}) => {
     const [runs, setRuns] = useState<Run[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
 
@@ -26,6 +26,7 @@ const RunList: React.FC<RunListProps> = ({ experimentId }) => {
             }
 
             const data = await response.json();
+            console.log(data);
             setRuns(data);
         } catch (error) {
             console.error('Error fetching runs:', error);
@@ -53,7 +54,7 @@ const RunList: React.FC<RunListProps> = ({ experimentId }) => {
     return (
         <div className="mt-2">
             {runs.map(run => (
-                <RunCard key={run.id} run={run} />
+                <RunCard key={run?.info?.run_id} run={run}/>
             ))}
         </div>
     );
