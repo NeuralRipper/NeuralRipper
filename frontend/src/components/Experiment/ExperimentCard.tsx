@@ -1,16 +1,13 @@
-import {ChevronDown, ChevronRight, Terminal} from 'lucide-react';
+import {ChevronDown, ChevronRight} from 'lucide-react';
 import {useState} from 'react';
 import RunList from '../Run/RunList.tsx';
 import type {ExperimentCardProps} from '../types/types.ts';
 import formatDate from "../utils/format.tsx";
+import statusStyles from "../types/statusStyles.ts"
 
 const ExperimentCard: React.FC<ExperimentCardProps> = ({experiment}) => {
     const [isExpanded, setIsExpanded] = useState<boolean>(false);
-
-    const statusStyles = {
-        active: "bg-green-500/20 text-green-400 border border-green-500/50",
-        deleted: "bg-red-500/20 text-red-400 border border-red-500/50"
-    };
+    const {ExperimentStatusStyles} = statusStyles;  // Destructure
 
     const getTags = (): string[] => {
         if (Array.isArray(experiment.tags)) {
@@ -24,28 +21,26 @@ const ExperimentCard: React.FC<ExperimentCardProps> = ({experiment}) => {
 
     const handleToggleExpand = (): void => {
         setIsExpanded(!isExpanded);
-
     };
 
     return (
         <div
             className="bg-gray-900/90 border border-cyan-500/40 rounded hover:border-cyan-400/90 transition-colors font-mono">
-            <div className="p-2">
+            <div className="p-1.5">
                 <div className="flex items-center gap-2">
-                    <Terminal className="text-cyan-400 h-4 w-4 flex-shrink-0"/>
                     <button
                         onClick={handleToggleExpand}
                         className="text-cyan-400 hover:text-cyan-300 font-bold text-sm truncate flex items-center gap-1"
                     >
                         {isExpanded ? (
-                            <ChevronDown className="h-3 w-3"/>
+                            <ChevronDown className="h-3.5 w-3.5"/>
                         ) : (
-                            <ChevronRight className="h-3 w-3"/>
+                            <ChevronRight className="h-3.5 w-3.5"/>
                         )}
                         {experiment.name}
                     </button>
                     <span
-                        className={`px-1 py-0.5 rounded text-xs ${statusStyles[experiment.lifecycle_stage as keyof typeof statusStyles]}`}>
+                        className={`px-1 py-0.5 rounded text-xs ${ExperimentStatusStyles[experiment.lifecycle_stage as keyof typeof ExperimentStatusStyles]}`}>
                         {experiment.lifecycle_stage.toUpperCase()}
                     </span>
                     <div className="text-xs text-yellow-400">

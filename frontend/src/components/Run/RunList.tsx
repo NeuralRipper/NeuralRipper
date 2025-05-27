@@ -11,29 +11,31 @@ const RunList: React.FC<RunListProps> = ({experimentId}) => {
     const [loading, setLoading] = useState<boolean>(true);
 
     useEffect(() => {
+
+        // only use for this useEffect hook
+        const getRuns = async () => {
+            try {
+                setLoading(true);
+                const url = `http://localhost:8000/runs/list/${experimentId}`;
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    console.log(`Fetch Failed: ${response.status}`);
+                    return;
+                }
+
+                const data = await response.json();
+                console.log(data);
+                setRuns(data);
+            } catch (error) {
+                console.error('Error fetching runs:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         getRuns();
     }, [experimentId]);
-
-    const getRuns = async () => {
-        try {
-            setLoading(true);
-            const url = `http://localhost:8000/runs/list/${experimentId}`;
-            const response = await fetch(url);
-
-            if (!response.ok) {
-                console.log(`Fetch Failed: ${response.status}`);
-                return;
-            }
-
-            const data = await response.json();
-            console.log(data);
-            setRuns(data);
-        } catch (error) {
-            console.error('Error fetching runs:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     if (loading) {
         return (

@@ -1,16 +1,10 @@
-import {Play} from 'lucide-react';
+import {Terminal} from 'lucide-react';
 import type {RunCardProps} from '../types/types.ts';
 import formatDate from "../utils/format.tsx";
+import statusStyles from "../types/statusStyles.ts";
 
 const RunCard: React.FC<RunCardProps> = ({run}) => {
-    const statusStyles = {
-        RUNNING: "bg-blue-500/20 text-blue-400 border border-blue-500/50",
-        FINISHED: "bg-green-500/20 text-green-400 border border-green-500/50",
-        FAILED: "bg-red-500/20 text-red-400 border border-red-500/50",
-        SCHEDULED: "bg-yellow-500/20 text-yellow-400 border border-yellow-500/50"
-    };
-
-
+    const { RunStatusStyles } = statusStyles;       // Destructure
     // Handle potentially missing info
     const runInfo = run.info;
     const runId = runInfo?.run_id || '';
@@ -20,15 +14,15 @@ const RunCard: React.FC<RunCardProps> = ({run}) => {
 
     return (
         <div
-            className="bg-gray-800/50 border border-gray-600/40 rounded-md hover:border-gray-500/60 transition-colors font-mono ml-4 mb-1">
-            <div className="p-2">
+            className="bg-gray-800/50 border border-gray-600/40 rounded-md hover:border-gray-500/60 transition-colors font-mono ml-7 mb-0.5 mr-2">
+            <div className="p-1">
                 <div className="flex items-center gap-2">
-                    <Play className="text-purple-400 h-3 w-3 flex-shrink-0"/>
+                    <Terminal className="text-purple-400 h-3 w-3"/>
                     <span className="text-purple-300 text-xs font-medium truncate">
                         {runName}
                     </span>
                     <span
-                        className={`px-1 py-0.5 rounded text-xs ${statusStyles[status as keyof typeof statusStyles] || statusStyles.SCHEDULED}`}>
+                        className={`px-1 py-0.5 rounded text-xs ${RunStatusStyles[status as keyof typeof RunStatusStyles] || RunStatusStyles.SCHEDULED}`}>
                         {status}
                     </span>
                     <div className="text-xs text-gray-400 ml-auto">
