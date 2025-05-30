@@ -3,7 +3,7 @@ import type {RunCardProps} from '../types/types.ts';
 import formatDate from "../utils/format.tsx";
 import statusStyles from "../types/statusStyles.ts";
 
-const RunCard: React.FC<RunCardProps> = ({run}) => {
+const RunListCard: React.FC<RunCardProps> = ({run}) => {
     const { RunStatusStyles } = statusStyles;       // Destructure
     // Handle potentially missing info
     const runInfo = run.info;
@@ -34,4 +34,4 @@ const RunCard: React.FC<RunCardProps> = ({run}) => {
     );
 };
 
-export default RunCard;
+export default RunListCard;

@@ -1,5 +1,5 @@
 import {useEffect, useState} from "react";
-import RunCard from "./RunCard";
+import RunListCard from "./RunListCard.tsx";
 import type {Run} from '../types/types.ts';
 
 interface RunListProps {
@@ -56,7 +56,7 @@ const RunList: React.FC<RunListProps> = ({experimentId}) => {
     return (
         <div className="mt-2">
             {runs.map(run => (
-                <RunCard key={run?.info?.run_id} run={run}/>
+                <RunListCard key={run?.info?.run_id} run={run}/>
             ))}
         </div>
     );

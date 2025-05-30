@@ -25,7 +25,7 @@ const Sidebar: React.FC = () => {
     };
 
     return (
-        <div className="w-64 bg-gray-900/50 border-r border-cyan-500/30 min-h-screen overflow-y-auto rounded-r-2xl">
+        <div className="w-64 bg-gray-900/50 border-r border-cyan-500/30 min-h-screen overflow-y-auto">
 
             {/* Model Types */}
             <div className="p-4 border-b border-cyan-500/20">
