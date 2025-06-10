@@ -2,6 +2,8 @@ import {Terminal} from 'lucide-react';
 import type {RunCardProps} from '../types/types.ts';
 import formatDate from "../utils/format.tsx";
 import statusStyles from "../types/statusStyles.ts";
+import { useNavigate } from "react-router";
+
 
 const RunListCard: React.FC<RunCardProps> = ({run}) => {
     const { RunStatusStyles } = statusStyles;       // Destructure
@@ -11,6 +13,12 @@ const RunListCard: React.FC<RunCardProps> = ({run}) => {
     const runName = runInfo?.run_name || `Run ${runId.slice(0, 8)}`;
     const status = runInfo?.status || 'SCHEDULED';
     const startTime = runInfo?.start_time;
+    const navigate = useNavigate();   // use for internal route, not http links
+
+
+    const handleRunClick = () => {
+        navigate(`runs/${runId}`);
+    }
 
     return (
         <div
@@ -18,9 +26,11 @@ const RunListCard: React.FC<RunCardProps> = ({run}) => {
             <div className="p-1">
                 <div className="flex items-center gap-2">
                     <Terminal className="text-purple-400 h-3 w-3"/>
-                    <span className="text-purple-300 text-xs font-medium truncate">
+                    {/*Click the RunListCard will redirect to RunDetail*/}
+                    <button onClick={handleRunClick}
+                        className="text-purple-300 text-xs font-medium truncate">
                         {runName}
-                    </span>
+                    </button>
                     <span
                         className={`px-1 py-0.5 rounded text-xs ${RunStatusStyles[status as keyof typeof RunStatusStyles] || RunStatusStyles.SCHEDULED}`}>
                         {status}
