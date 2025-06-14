@@ -1,7 +1,7 @@
 from mlflow import MlflowClient
 from mlflow.environment_variables import MLFLOW_TRACKING_URI
 
-from backend.app.schemas.run_response import RunResponse, RunData, RunInfo
+from backend.app.schemas.run import RunResponse, RunData, RunInfo
 
 client = MlflowClient(MLFLOW_TRACKING_URI.get())
 
@@ -38,3 +38,10 @@ class RunHandler:
 
     def get_run_by_id(self, rid):
         return self.__client.get_run(run_id=rid)
+
+    def get_metric_history_by_id(self, rid, key):
+        """
+        rid: run_id
+        key: metric_name
+        """
+        return self.__client.get_metric_history(run_id=rid, key=key)

@@ -2,7 +2,7 @@ from mlflow import MlflowClient
 # all the mlflow variables are well defined, use get() and it reads env or default
 from mlflow.environment_variables import MLFLOW_TRACKING_URI
 
-from backend.app.schemas.experiment_response import ExperimentResponse
+from backend.app.schemas.experiment import ExperimentResponse
 from backend.app.utils.time_convert import convert
 
 

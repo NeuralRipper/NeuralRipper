@@ -1,7 +1,7 @@
 import Dashboard from "./components/Dashboard/Dashboard";
 import Sidebar from "./components/Sidebar/Sidebar";
 import {Routes, Route} from "react-router";
-import RunDetail from "./components/Run/RunDetail.tsx";
+import RunDetailCard from "./components/Run/RunDetailCard.tsx";
 
 const App: React.FC = () => {
     return (
@@ -12,7 +12,7 @@ const App: React.FC = () => {
                     <Dashboard/>
                 </div>
             }/>
-            <Route path="/runs/:runId" element={<RunDetail />}/>
+            <Route path="/runs/:runId" element={<RunDetailCard />}/>
         </Routes>
     );
 };
