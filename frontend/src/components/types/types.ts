@@ -1,5 +1,7 @@
 // Common types for the application
 
+import * as React from "react";
+
 export interface Experiment {
     id: string;
     name: string;
@@ -8,6 +10,10 @@ export interface Experiment {
     tags: string[] | Record<string, never>;
     creation_time: number;
     last_update_time: number;
+}
+
+export interface ExperimentListProps {
+    onSelectedExpId: React.Dispatch<React.SetStateAction<string>>;
 }
 
 // Backend response structure - matches RunResponse from FastApi
@@ -25,6 +31,11 @@ export interface RunInfo {
     user_id?: string;
 }
 
+export interface RunListProps {
+    experimentId: string;
+    onSelectedRunId: React.Dispatch<React.SetStateAction<string>>;
+}
+
 export interface RunData {
     metrics?: Record<string, never>;
     params?: Record<string, never>;
@@ -38,14 +49,32 @@ export interface Run {
 
 export interface ExperimentCardProps {
     experiment: Experiment;
+    onSelectedExpId: React.Dispatch<React.SetStateAction<string>>
 }
 
-export interface RunCardProps {
+export interface RunListCardProps {
     run: Run;
+    onSelectedRunId: React.Dispatch<React.SetStateAction<string>>;
 }
 
 export interface FilterCardProps {
     label: string;
     active: boolean;
     onClick: () => void;
+}
+
+export interface MetricDetail {
+    key: string;
+    value: number;
+    timestamp: number;
+    step: number;
+    run_id: string;
+}
+
+export interface MetricList {
+    metrics: MetricDetail[];
+}
+
+export interface RunDetailCardProps {
+    selectedRunId: string;
 }

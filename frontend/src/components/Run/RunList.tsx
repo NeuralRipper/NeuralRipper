@@ -1,12 +1,9 @@
 import {useEffect, useState} from "react";
 import RunListCard from "./RunListCard.tsx";
-import type {Run} from '../types/types.ts';
+import type {RunListProps, Run} from '../types/types.ts';
 
-interface RunListProps {
-    experimentId: string;
-}
 
-const RunList: React.FC<RunListProps> = ({experimentId}) => {
+const RunList: React.FC<RunListProps> = ({experimentId, onSelectedRunId}) => {
     const [runs, setRuns] = useState<Run[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
 
@@ -56,7 +53,7 @@ const RunList: React.FC<RunListProps> = ({experimentId}) => {
     return (
         <div className="mt-2">
             {runs.map(run => (
-                <RunListCard key={run?.info?.run_id} run={run}/>
+                <RunListCard key={run?.info?.run_id} run={run} onSelectedRunId={onSelectedRunId}/>
             ))}
         </div>
     );

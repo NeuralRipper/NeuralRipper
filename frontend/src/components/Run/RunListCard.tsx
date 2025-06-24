@@ -1,11 +1,10 @@
 import {Terminal} from 'lucide-react';
-import type {RunCardProps} from '../types/types.ts';
+import type { RunListCardProps } from '../types/types.ts';
 import formatDate from "../utils/format.tsx";
 import statusStyles from "../types/statusStyles.ts";
-import { useNavigate } from "react-router";
 
 
-const RunListCard: React.FC<RunCardProps> = ({run}) => {
+const RunListCard: React.FC<RunListCardProps> = ({run, onSelectedRunId}) => {
     const { RunStatusStyles } = statusStyles;       // Destructure
     // Handle potentially missing info
     const runInfo = run.info;
@@ -13,11 +12,9 @@ const RunListCard: React.FC<RunCardProps> = ({run}) => {
     const runName = runInfo?.run_name || `Run ${runId.slice(0, 8)}`;
     const status = runInfo?.status || 'SCHEDULED';
     const startTime = runInfo?.start_time;
-    const navigate = useNavigate();   // use for internal route, not http links
-
 
     const handleRunClick = () => {
-        navigate(`runs/${runId}`);
+        onSelectedRunId(runId);
     }
 
     return (

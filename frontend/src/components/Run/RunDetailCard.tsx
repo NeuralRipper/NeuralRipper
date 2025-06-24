@@ -1,28 +1,21 @@
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
-import {useNavigate, useParams} from "react-router";
+import {useNavigate} from "react-router";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Target, TrendingUp, BarChart3, Activity } from 'lucide-react';
+import type {MetricList, MetricDetail, RunDetailCardProps} from "../types/types.ts";
 
-interface MetricDetail {
-    key: string;
-    value: number;
-    timestamp: number;
-    step: number;
-    run_id: string;
-}
 
-interface MetricList {
-    metrics: MetricDetail[];
-}
-
-const RunDetailCard = () => {
-    const { runId } = useParams<{ runId: string }>();
+const RunDetailCard: React.FC<RunDetailCardProps> = ({ selectedRunId }) => {
+    const runId = selectedRunId;
     const [runData, setRunData] = useState(null);
     const [runMetricList, setRunMetricList] = useState<MetricList | null>(null);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
     useEffect(() => {
+if (!runId) { return }
+        if (!runId || runId === "") { return }
+
         const fetchAllData = async () => {
             setLoading(true);
 
@@ -55,7 +48,7 @@ const RunDetailCard = () => {
         }
     }, [runId]);
 
-    // 🧮 STEP 1: Group metrics by key (like groupby in pandas)
+    // 1. Group metrics by key (like groupby in pandas)
     const groupedMetrics = runMetricList?.metrics.reduce((acc, metric) => {
         if (!acc[metric.key]) {
             acc[metric.key] = [];
@@ -68,7 +61,7 @@ const RunDetailCard = () => {
         return acc;
     }, {} as Record<string, Array<{step: number, value: number, timestamp: number}>>) || {};
 
-    // 🔄 STEP 2: Sort each metric group by step (epoch)
+    // 2. Sort each metric group by step (epoch)
     Object.keys(groupedMetrics).forEach(key => {
         groupedMetrics[key].sort((a, b) => a.step - b.step);
     });

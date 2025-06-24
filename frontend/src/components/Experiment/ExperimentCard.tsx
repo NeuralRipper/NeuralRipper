@@ -1,13 +1,15 @@
-import {ChevronDown, ChevronRight} from 'lucide-react';
-import {useState} from 'react';
-import RunList from '../Run/RunList.tsx';
+// import {ChevronDown, ChevronRight} from 'lucide-react';
+// import {useState} from 'react';
+// import RunList from '../Run/RunList.tsx';
 import type {ExperimentCardProps} from '../types/types.ts';
 import formatDate from "../utils/format.tsx";
 import statusStyles from "../types/statusStyles.ts"
 
-const ExperimentCard: React.FC<ExperimentCardProps> = ({experiment}) => {
-    const [isExpanded, setIsExpanded] = useState<boolean>(false);
-    const {ExperimentStatusStyles} = statusStyles;  // Destructure
+
+// TODO: onClick from dashboard to experimentList and reach here, so we can set the selectedExpId here, for showing the runList page in the same page
+const ExperimentCard: React.FC<ExperimentCardProps> = ({experiment, onSelectedExpId}) => {
+    // const [isExpanded, setIsExpanded] = useState<boolean>(false);
+    const { ExperimentStatusStyles } = statusStyles;  // Destructure
 
     const getTags = (): string[] => {
         if (Array.isArray(experiment.tags)) {
@@ -19,8 +21,9 @@ const ExperimentCard: React.FC<ExperimentCardProps> = ({experiment}) => {
         return [];
     };
 
-    const handleToggleExpand = (): void => {
-        setIsExpanded(!isExpanded);
+    const handleExpClick = (): void => {
+        console.log("clicked")
+        onSelectedExpId(experiment.id);
     };
 
     return (
@@ -29,14 +32,9 @@ const ExperimentCard: React.FC<ExperimentCardProps> = ({experiment}) => {
             <div className="p-1.5">
                 <div className="flex items-center gap-2">
                     <button
-                        onClick={handleToggleExpand}
+                        onClick={handleExpClick}
                         className="text-cyan-400 hover:text-cyan-300 font-bold text-sm truncate flex items-center gap-1"
                     >
-                        {isExpanded ? (
-                            <ChevronDown className="h-3.5 w-3.5"/>
-                        ) : (
-                            <ChevronRight className="h-3.5 w-3.5"/>
-                        )}
                         {experiment.name}
                     </button>
                     <span
@@ -57,11 +55,6 @@ const ExperimentCard: React.FC<ExperimentCardProps> = ({experiment}) => {
                     </div>
                 </div>
             </div>
-            {isExpanded && (
-                <div className="border-t border-cyan-500/20 pb-2">
-                    <RunList experimentId={experiment.id}/>
-                </div>
-            )}
         </div>
     );
 };
