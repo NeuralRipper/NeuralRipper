@@ -14,6 +14,7 @@ export interface Experiment {
 
 export interface ExperimentListProps {
     onSelectedExpId: React.Dispatch<React.SetStateAction<string>>;
+    selectedExpId: string;
 }
 
 // Backend response structure - matches RunResponse from FastApi
@@ -50,6 +51,7 @@ export interface Run {
 export interface ExperimentCardProps {
     experiment: Experiment;
     onSelectedExpId: React.Dispatch<React.SetStateAction<string>>
+    selectedExpId: string;
 }
 
 export interface RunListCardProps {
@@ -77,4 +79,10 @@ export interface MetricList {
 
 export interface RunDetailCardProps {
     selectedRunId: string;
+}
+
+export interface SidebarProps {
+    onSelectedExpId: React.Dispatch<React.SetStateAction<string>>;
+    onSelectedRunId: React.Dispatch<React.SetStateAction<string>>;
+    selectedExpId: string;
 }

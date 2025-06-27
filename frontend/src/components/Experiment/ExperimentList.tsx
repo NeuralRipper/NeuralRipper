@@ -2,7 +2,7 @@ import {useEffect, useState} from "react";
 import ExperimentCard from "./ExperimentCard";
 import type {Experiment, ExperimentListProps} from '../types/types.ts';
 
-const ExperimentList: React.FC<ExperimentListProps> = ({ onSelectedExpId }) => {
+const ExperimentList: React.FC<ExperimentListProps> = ({ onSelectedExpId, selectedExpId }) => {
 
     const [experiments, setExperiments] = useState<Experiment[]>([]);
 
@@ -32,7 +32,7 @@ const ExperimentList: React.FC<ExperimentListProps> = ({ onSelectedExpId }) => {
     return (
         <div className="grid gap-1">
             {experiments && experiments.map(experiment => (
-                <ExperimentCard key={experiment.id} experiment={experiment} onSelectedExpId={onSelectedExpId}/>
+                <ExperimentCard key={experiment.id} experiment={experiment} onSelectedExpId={onSelectedExpId} selectedExpId={selectedExpId}/>
             ))}
         </div>
     );

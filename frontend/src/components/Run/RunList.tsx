@@ -8,7 +8,6 @@ const RunList: React.FC<RunListProps> = ({experimentId, onSelectedRunId}) => {
     const [loading, setLoading] = useState<boolean>(true);
 
     useEffect(() => {
-
         // only use for this useEffect hook
         const getRuns = async () => {
             try {
@@ -22,7 +21,6 @@ const RunList: React.FC<RunListProps> = ({experimentId, onSelectedRunId}) => {
                 }
 
                 const data = await response.json();
-                console.log(data);
                 setRuns(data);
             } catch (error) {
                 console.error('Error fetching runs:', error);
@@ -51,7 +49,7 @@ const RunList: React.FC<RunListProps> = ({experimentId, onSelectedRunId}) => {
     }
 
     return (
-        <div className="mt-2">
+        <div>
             {runs.map(run => (
                 <RunListCard key={run?.info?.run_id} run={run} onSelectedRunId={onSelectedRunId}/>
             ))}

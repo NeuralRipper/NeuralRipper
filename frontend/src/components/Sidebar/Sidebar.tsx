@@ -1,71 +1,23 @@
-import { useState } from 'react';
-import FilterCard from "../Filter/FilterCard";
+import ExperimentList from "../Experiment/ExperimentList.tsx";
+import RunList from "../Run/RunList.tsx";
+import type {SidebarProps} from "../types/types.ts";
 
-const Sidebar: React.FC = () => {
-    const [activeModelTypes, setActiveModelTypes] = useState<string[]>([]);
-    const [activeStatusTypes, setActiveStatusTypes] = useState<string[]>([]);
 
-    const modelTypes = ["Transformer", "CNN", "RNN", "GAN", "Diffusion", "Reinforcement"];
-    const statusTypes = ["Active", "Training", "Paused", "Completed", "Error"];
-
-    const handleModelTypeClick = (type: string): void => {
-        setActiveModelTypes(prev =>
-            prev.includes(type)
-                ? prev.filter(t => t !== type)
-                : [...prev, type]
-        );
-    };
-
-    const handleStatusTypeClick = (type: string): void => {
-        setActiveStatusTypes(prev =>
-            prev.includes(type)
-                ? prev.filter(t => t !== type)
-                : [...prev, type]
-        );
-    };
-
+const Sidebar: React.FC<SidebarProps> = ({onSelectedExpId, onSelectedRunId, selectedExpId}) => {
     return (
-        <div className="w-64 bg-gray-900/50 border-r border-cyan-500/30 min-h-screen overflow-y-auto">
-
-            {/* Model Types */}
-            <div className="p-4 border-b border-cyan-500/20">
-                <h3 className="text-cyan-400 font-mono text-sm font-bold mb-3">MODEL TYPES</h3>
-                <div className="grid grid-cols-2 gap-2">
-                    {modelTypes.map((type) => (
-                        <FilterCard
-                            key={type}
-                            label={type}
-                            active={activeModelTypes.includes(type)}
-                            onClick={() => handleModelTypeClick(type)}
-                        />
-                    ))}
-                </div>
+        <aside className="border border-gray-800 bg-gray-900/50">
+            {/*paddings*/}
+            <div className="p-4">
+                <h2 className="text-md font-semibold text-cyan-400 mb-3">Experiments</h2>
+                <ExperimentList onSelectedExpId={onSelectedExpId} selectedExpId={selectedExpId}/>
             </div>
-
-            {/* Status */}
-            <div className="p-4 border-b border-cyan-500/20">
-                <h3 className="text-cyan-400 font-mono text-sm font-bold mb-3">STATUS</h3>
-                <div className="grid grid-cols-2 gap-2">
-                    {statusTypes.map((status) => (
-                        <FilterCard
-                            key={status}
-                            label={status}
-                            active={activeStatusTypes.includes(status)}
-                            onClick={() => handleStatusTypeClick(status)}
-                        />
-                    ))}
+            {selectedExpId && (
+                <div className="p-4">
+                    <h2 className="text-md font-semibold text-cyan-400 mb-3">Runs</h2>
+                    <RunList experimentId={selectedExpId} onSelectedRunId={onSelectedRunId}/>
                 </div>
-            </div>
-
-            {/* Stats */}
-            <div className="p-4 border-t border-cyan-500/20 mt-4">
-                <div className="text-xs font-mono text-gray-500 space-y-1">
-                    <div>TOTAL: <span className="text-cyan-400">1,247</span></div>
-                    <div>ACTIVE: <span className="text-green-400">892</span></div>
-                    <div>TRAINING: <span className="text-yellow-400">234</span></div>
-                </div>
-            </div>
-        </div>
+            )}
+        </aside>
     );
 };
 

@@ -1,7 +1,7 @@
-import ExperimentList from "../Experiment/ExperimentList";
-import {useState} from "react";
-import RunList from "../Run/RunList.tsx";
 import RunDetailCard from "../Run/RunDetailCard.tsx";
+import Sidebar from "../Sidebar/Sidebar.tsx";
+import Titlebar from "../Sidebar/Titlebar.tsx";
+import {useState} from "react";
 
 
 const Dashboard: React.FC = () => {
@@ -9,13 +9,21 @@ const Dashboard: React.FC = () => {
     const [selectedRunId, setSelectedRunId] = useState("");
 
     return (
-        <div className="flex-1 p-5 min-h-screen">
-            <h1 className="italic text-4xl font-mono font-bold bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 bg-clip-text text-transparent mb-4 drop-shadow-[0_0_15px_rgba(34,211,238,0.5)]">
-                NEURAL RIPPER
-            </h1>
-            <ExperimentList onSelectedExpId={setSelectedExpId}/>
-            {selectedExpId && <RunList experimentId={selectedExpId} onSelectedRunId={setSelectedRunId}/>}
-            {selectedRunId && <RunDetailCard selectedRunId={selectedRunId}/>}
+        <div className="min-h-screen bg-gray-950 text-gray-100">
+            <Titlebar/>
+            {/*flexible horizontally*/}
+            <div className="flex">
+                <Sidebar
+                    onSelectedExpId={setSelectedExpId}
+                    onSelectedRunId={setSelectedRunId}
+                    selectedExpId={selectedExpId}
+                />
+                <main className="flex-1 bg-gray-950">
+                    <div className="p-6">
+                        <RunDetailCard selectedRunId={selectedRunId}/>
+                    </div>
+                </main>
+            </div>
         </div>
     );
 };

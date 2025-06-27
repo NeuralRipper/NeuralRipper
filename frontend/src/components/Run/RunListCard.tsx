@@ -1,11 +1,11 @@
 import {Terminal} from 'lucide-react';
-import type { RunListCardProps } from '../types/types.ts';
+import type {RunListCardProps} from '../types/types.ts';
 import formatDate from "../utils/format.tsx";
 import statusStyles from "../types/statusStyles.ts";
 
 
 const RunListCard: React.FC<RunListCardProps> = ({run, onSelectedRunId}) => {
-    const { RunStatusStyles } = statusStyles;       // Destructure
+    const {RunStatusStyles} = statusStyles;       // Destructure
     // Handle potentially missing info
     const runInfo = run.info;
     const runId = runInfo?.run_id || '';
@@ -18,25 +18,29 @@ const RunListCard: React.FC<RunListCardProps> = ({run, onSelectedRunId}) => {
     }
 
     return (
-        <div
-            className="bg-gray-800/50 border border-gray-600/40 rounded-md hover:border-gray-500/60 transition-colors font-mono ml-7 mb-0.5 mr-2">
-            <div className="p-1">
-                <div className="flex items-center gap-2">
-                    <Terminal className="text-purple-400 h-3 w-3"/>
-                    {/*Click the RunListCard will redirect to RunDetail*/}
-                    <button onClick={handleRunClick}
-                        className="text-purple-300 text-xs font-medium truncate">
-                        {runName}
-                    </button>
-                    <span
-                        className={`px-1 py-0.5 rounded text-xs ${RunStatusStyles[status as keyof typeof RunStatusStyles] || RunStatusStyles.SCHEDULED}`}>
-                        {status}
-                    </span>
-                    <div className="text-xs text-gray-400 ml-auto">
-                        {formatDate(startTime)}
+        <div className="bg-gray-900 border border-gray-600/40 rounded-md hover:bg-gray-600/50 transition-colors font-mono mb-0.5">
+
+                <button
+                    onClick={handleRunClick}
+                    className="w-full text-left px-3 py-2 rounded transition-colors bg-gray-800/50 hover:bg-gray-700/50"
+                >
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Terminal className="h-3 w-3 text-purple-400"/>
+                            <span className="text-sm font-mono">{runName}</span>
+                        </div>
+                        <span
+                            className={`text-xs px-1.5 py-0.5 rounded ${RunStatusStyles[status as keyof typeof RunStatusStyles] || RunStatusStyles.SCHEDULED}`}>
+                            {status}
+                        </span>
                     </div>
-                </div>
-            </div>
+                    {runInfo?.start_time && (
+                        <div className="text-xs text-gray-400 mt-1">
+                            {formatDate(startTime)}
+                        </div>
+                    )}
+                </button>
+
         </div>
     );
 };
