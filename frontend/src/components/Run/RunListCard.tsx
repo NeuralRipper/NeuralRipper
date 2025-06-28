@@ -18,28 +18,33 @@ const RunListCard: React.FC<RunListCardProps> = ({run, onSelectedRunId}) => {
     }
 
     return (
-        <div className="bg-gray-900 border border-gray-600/40 rounded-md hover:bg-gray-600/50 transition-colors font-mono mb-0.5">
+        <div
+            className="bg-gray-900 border border-gray-600/40 rounded-md hover:bg-gray-600/50 transition-colors font-mono mb-0.5">
 
-                <button
-                    onClick={handleRunClick}
-                    className="w-full text-left px-3 py-2 rounded transition-colors bg-gray-800/50 hover:bg-gray-700/50"
-                >
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Terminal className="h-3 w-3 text-purple-400"/>
-                            <span className="text-sm font-mono">{runName}</span>
-                        </div>
-                        <span
-                            className={`text-xs px-1.5 py-0.5 rounded ${RunStatusStyles[status as keyof typeof RunStatusStyles] || RunStatusStyles.SCHEDULED}`}>
-                            {status}
-                        </span>
+            <button
+                onClick={handleRunClick}
+                className="w-full text-left px-3 py-2 rounded transition-colors bg-gray-800/50 hover:bg-gray-700/50"
+            >
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Terminal className="h-3 w-3 text-purple-400"/>
+                        <span className="text-sm font-mono">{runName}</span>
                     </div>
+
+                </div>
+                <div className="flex gap-2">
                     {runInfo?.start_time && (
                         <div className="text-xs text-gray-400 mt-1">
                             {formatDate(startTime)}
                         </div>
                     )}
-                </button>
+                    <span
+                        className={`text-xs px-1.5 py-0.5 rounded ${RunStatusStyles[status as keyof typeof RunStatusStyles] || RunStatusStyles.SCHEDULED}`}>
+                            {status}
+                    </span>
+                </div>
+
+            </button>
 
         </div>
     );

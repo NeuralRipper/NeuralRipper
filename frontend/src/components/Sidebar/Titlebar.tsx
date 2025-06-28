@@ -2,7 +2,7 @@ import {Brain} from "lucide-react";
 
 const Titlebar = () => {
     return (
-        <header className="border border-gray-800 bg-gray-900/50">
+        <header className="border border-gray-800 bg-gray-900/30">
             <div className="px-6 py-4">
                 <div className="flex items-center gap-3">
                     <Brain className="text-cyan-400"/>

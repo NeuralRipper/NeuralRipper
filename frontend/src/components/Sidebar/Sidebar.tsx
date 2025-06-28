@@ -5,7 +5,7 @@ import type {SidebarProps} from "../types/types.ts";
 
 const Sidebar: React.FC<SidebarProps> = ({onSelectedExpId, onSelectedRunId, selectedExpId}) => {
     return (
-        <aside className="border border-gray-800 bg-gray-900/50">
+        <aside className="border border-gray-800 bg-gray-900/30">
             {/*paddings*/}
             <div className="p-4">
                 <h2 className="text-md font-semibold text-cyan-400 mb-3">Experiments</h2>

@@ -18,7 +18,7 @@ const Dashboard: React.FC = () => {
                     onSelectedRunId={setSelectedRunId}
                     selectedExpId={selectedExpId}
                 />
-                <main className="flex-1 bg-gray-950">
+                <main className="flex-1 bg-gray-900/30">
                     <div className="p-6">
                         <RunDetailCard selectedRunId={selectedRunId}/>
                     </div>
