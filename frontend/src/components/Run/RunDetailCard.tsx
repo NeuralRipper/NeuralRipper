@@ -13,6 +13,7 @@ const RunDetailCard: React.FC<RunDetailCardProps> = ({selectedRunId}) => {
     // TODO: RunList Status is not align with the date, fix it
     // TODO: remove the border of metrics and back the bg darker might help a lot
     // TODO: might need to separate the metrics, like loss, learning rate, acc,to make this cleaner
+    // TODO: realtime update of the graph?
 
     useEffect(() => {
         if (!runId || runId === "") {
