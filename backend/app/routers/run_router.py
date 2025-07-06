@@ -2,9 +2,9 @@ from typing import List
 
 from fastapi import APIRouter, status
 
-from backend.app.handlers.run_handler import RunHandler
-from backend.app.schemas.metric import MetricList, MetricDetail
-from backend.app.schemas.run import RunResponse
+from app.handlers.run_handler import RunHandler
+from app.schemas.metric import MetricList, MetricDetail
+from app.schemas.run import RunResponse
 from mlflow.exceptions import RestException
 
 handler = RunHandler()

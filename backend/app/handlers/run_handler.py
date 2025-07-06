@@ -1,7 +1,7 @@
 from mlflow import MlflowClient
 from mlflow.environment_variables import MLFLOW_TRACKING_URI
 
-from backend.app.schemas.run import RunResponse, RunData, RunInfo
+from app.schemas.run import RunResponse, RunData, RunInfo
 
 client = MlflowClient(MLFLOW_TRACKING_URI.get())
 

@@ -5,7 +5,7 @@ return the related BaseModels for both experiment and run which extracted and cr
 
 from fastapi import APIRouter
 
-from backend.app.handlers.experiment_handler import ExperimentHandler
+from app.handlers.experiment_handler import ExperimentHandler
 
 exp_handler = ExperimentHandler()
 
