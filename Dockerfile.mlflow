@@ -9,4 +9,8 @@ CMD ["mlflow", "server", \
      "--backend-store-uri", "sqlite:///data/mlflow.db", \
      "--default-artifact-root", "gs://neuralripper-mlflow-artifacts/artifacts", \
      "--host", "0.0.0.0", \
-     "--port", "5000"]
+     "--port", "5000", \
+     "--serve-artifacts"]
+
+# --serve-artifacts enables artifact proxying via the server
+# all artifact uploads and downloads are proxied through your MLflow server
