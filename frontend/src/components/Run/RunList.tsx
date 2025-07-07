@@ -1,6 +1,7 @@
 import {useEffect, useState} from "react";
 import RunListCard from "./RunListCard.tsx";
 import type {RunListProps, Run} from '../types/types.ts';
+import { API_BASE_URL } from "../../config.ts";
 
 
 const RunList: React.FC<RunListProps> = ({experimentId, onSelectedRunId}) => {
@@ -10,7 +11,8 @@ const RunList: React.FC<RunListProps> = ({experimentId, onSelectedRunId}) => {
         // only use for this useEffect hook
         const getRuns = async () => {
             try {
-                const url = `http://localhost:8000/runs/list/${experimentId}`;
+                console.log(API_BASE_URL)
+                const url = `${API_BASE_URL}/runs/list/${experimentId}`;
                 const response = await fetch(url);
 
                 if (!response.ok) {

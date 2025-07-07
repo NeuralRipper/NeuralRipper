@@ -1,6 +1,7 @@
 import {useEffect, useState} from "react";
 import ExperimentCard from "./ExperimentCard";
 import type {Experiment, ExperimentListProps} from '../types/types.ts';
+import { API_BASE_URL } from "../../config.ts";
 
 const ExperimentList: React.FC<ExperimentListProps> = ({onSelectedExpId, selectedExpId}) => {
 
@@ -9,7 +10,7 @@ const ExperimentList: React.FC<ExperimentListProps> = ({onSelectedExpId, selecte
     useEffect(() => {
         const getExperimentList = async (): Promise<void> => {
             try {
-                const url = "http://localhost:8000/experiments";
+                const url = `${API_BASE_URL}/experiments`;
                 const response = await fetch(url);
 
                 if (!response.ok) {

@@ -1,14 +1,11 @@
 from mlflow import MlflowClient
-from mlflow.environment_variables import MLFLOW_TRACKING_URI
-
+from settings import MLFLOW_TRACKING_URI
 from app.schemas.run import RunResponse, RunData, RunInfo
-
-client = MlflowClient(MLFLOW_TRACKING_URI.get())
 
 
 class RunHandler:
     def __init__(self):
-        self.__client = MlflowClient(MLFLOW_TRACKING_URI.get())
+        self.__client = MlflowClient(MLFLOW_TRACKING_URI)
 
     def get_run_list(self, eid):
         run_ls = self.__client.search_runs(experiment_ids=eid)

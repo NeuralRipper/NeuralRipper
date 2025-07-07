@@ -2,6 +2,7 @@ import {CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAx
 import {useEffect, useState} from "react";
 import {Activity, BarChart3, Cpu, Target, TrendingUp} from 'lucide-react';
 import type {MetricList, RunDetailCardProps} from "../types/types.ts";
+import { API_BASE_URL } from "../../config.ts";
 
 
 const RunDetailCard: React.FC<RunDetailCardProps> = ({selectedRunId}) => {
@@ -23,8 +24,8 @@ const RunDetailCard: React.FC<RunDetailCardProps> = ({selectedRunId}) => {
         const fetchAllData = async () => {
             try {
                 const [runResponse, metricsResponse] = await Promise.all([
-                    fetch(`http://localhost:8000/runs/detail/${runId}`),
-                    fetch(`http://localhost:8000/runs/metrics/${runId}`)
+                    fetch(`${API_BASE_URL}/runs/detail/${runId}`),
+                    fetch(`${API_BASE_URL}/runs/metrics/${runId}`)
                 ]);
 
                 if (runResponse.ok) {
