@@ -1,17 +1,12 @@
 from mlflow import MlflowClient
-# all the mlflow variables are well defined, use get() and it reads env or default
-from mlflow.environment_variables import MLFLOW_TRACKING_URI
-
+from settings import MLFLOW_TRACKING_URI
 from app.schemas.experiment import ExperimentResponse
 from app.utils.time_convert import convert
-from dotenv import load_dotenv
-
-load_dotenv()       # source ../.env only affects current shell, fastapi can't load it
 
 
 class ExperimentHandler:
     def __init__(self):
-        self.__client = MlflowClient(MLFLOW_TRACKING_URI.get())
+        self.__client = MlflowClient(MLFLOW_TRACKING_URI)
 
     def get_experiment_list(self):
         exp_ls = self.__client.search_experiments()
