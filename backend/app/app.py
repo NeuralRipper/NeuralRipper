@@ -12,8 +12,6 @@ app.include_router(run_router.router)
 
 # Mind, different port is also different origin
 origins = [
-    # "http://localhost:5173",
-    # "http://127.0.0.1:5173"
     "*"
 ]
 
