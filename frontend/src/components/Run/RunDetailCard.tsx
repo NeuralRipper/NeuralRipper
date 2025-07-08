@@ -3,6 +3,7 @@ import {useEffect, useState} from "react";
 import {Activity, BarChart3, Cpu, Target, TrendingUp} from 'lucide-react';
 import type {MetricList, RunDetailCardProps} from "../types/types.ts";
 import { API_BASE_URL } from "../../config.ts";
+import SystemParams from "../Metric/SystemParams.tsx";
 
 
 const RunDetailCard: React.FC<RunDetailCardProps> = ({selectedRunId}) => {
@@ -31,11 +32,12 @@ const RunDetailCard: React.FC<RunDetailCardProps> = ({selectedRunId}) => {
                 if (runResponse.ok) {
                     const runData = await runResponse.json();
                     setRunData(runData);
+                    console.log(runData)
                 }
 
                 if (metricsResponse.ok) {
                     const metricList = await metricsResponse.json();
-                    console.log("📊 Raw metrics from API:", metricList); // Debug log
+                    console.log("Raw metrics from API:", metricList); // Debug log
                     setRunMetricList(metricList);
                 }
             } catch (error) {
@@ -66,7 +68,7 @@ const RunDetailCard: React.FC<RunDetailCardProps> = ({selectedRunId}) => {
         groupedMetrics[key].sort((a, b) => a.step - b.step);
     });
 
-    console.log("📈 Grouped and sorted metrics:", groupedMetrics); // Debug log
+    console.log("Grouped and sorted metrics:", groupedMetrics);
 
     if (!selectedRunId) {
         return (
@@ -137,7 +139,7 @@ const RunDetailCard: React.FC<RunDetailCardProps> = ({selectedRunId}) => {
             </div>
 
             {/* Parameters Section */}
-            <div className="bg-gray-800/50 rounded-lg p-6">
+            {/* <div className="bg-gray-800/50 rounded-lg p-6">
                 <h3 className="text-cyan-400 font-bold text-lg mb-4 uppercase tracking-wide">
                     Run Parameters
                 </h3>
@@ -147,9 +149,13 @@ const RunDetailCard: React.FC<RunDetailCardProps> = ({selectedRunId}) => {
                             <div className="text-xs text-cyan-300 uppercase tracking-wide mb-1">{key}</div>
                             <div className="text-yellow-400 font-bold">{value}</div>
                         </div>
-                    ))}
+                    ))} 
                 </div>
+            </div> */}
+            <div>
+                {runData && <SystemParams runParams={runData.data.params}/>}
             </div>
+            
 
             {/* Training Progress Charts */}
             {Object.keys(groupedMetrics).length > 0 && (

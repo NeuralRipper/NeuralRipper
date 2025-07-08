@@ -85,3 +85,13 @@ export interface SidebarProps {
     onSelectedRunId: React.Dispatch<React.SetStateAction<string>>;
     selectedExpId: string;
 }
+
+export interface SystemParamsProps {
+    runParams: Record<string, any>[];
+}
+
+export interface ParamGroup {
+    title: string,
+    color: string,
+    params: Record<string, any>;
+}
