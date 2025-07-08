@@ -10,7 +10,7 @@ const ExperimentList: React.FC<ExperimentListProps> = ({onSelectedExpId, selecte
     useEffect(() => {
         const getExperimentList = async (): Promise<void> => {
             try {
-                const url = `${API_BASE_URL}/experiments`;
+                const url = `${API_BASE_URL}/experiments/`;
                 const response = await fetch(url);
 
                 if (!response.ok) {
