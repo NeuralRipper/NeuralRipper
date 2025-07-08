@@ -139,19 +139,6 @@ const RunDetailCard: React.FC<RunDetailCardProps> = ({selectedRunId}) => {
             </div>
 
             {/* Parameters Section */}
-            {/* <div className="bg-gray-800/50 rounded-lg p-6">
-                <h3 className="text-cyan-400 font-bold text-lg mb-4 uppercase tracking-wide">
-                    Run Parameters
-                </h3>
-                <div className="grid grid-cols-4 gap-4">
-                    {runData && Object.entries(runData.data.params).map(([key, value]) => (
-                        <div key={key} className="bg-gray-800/50 rounded p-3">
-                            <div className="text-xs text-cyan-300 uppercase tracking-wide mb-1">{key}</div>
-                            <div className="text-yellow-400 font-bold">{value}</div>
-                        </div>
-                    ))} 
-                </div>
-            </div> */}
             <div>
                 {runData && <SystemParams runParams={runData.data.params}/>}
             </div>
