@@ -3,7 +3,7 @@ import {useEffect, useState} from "react";
 import {Activity, BarChart3, Cpu, Target, TrendingUp} from 'lucide-react';
 import type {MetricList, RunDetailCardProps} from "../types/types.ts";
 import { API_BASE_URL } from "../../config.ts";
-import SystemParams from "../Metric/SystemParams.tsx";
+import RunMetrics from "./RunMetrics.tsx";
 
 
 const RunDetailCard: React.FC<RunDetailCardProps> = ({selectedRunId}) => {
@@ -139,18 +139,14 @@ const RunDetailCard: React.FC<RunDetailCardProps> = ({selectedRunId}) => {
             </div>
 
             {/* Parameters Section */}
-            <div>
-                {runData && <SystemParams runParams={runData.data.params}/>}
-            </div>
-            
+            {runData && <RunMetrics runParams={runData.data.params}/>}
 
+            <h3 className="text-cyan-400 font-bold text-lg uppercase tracking-wide">
+                Training Progress Over Epochs
+            </h3>
             {/* Training Progress Charts */}
             {Object.keys(groupedMetrics).length > 0 && (
-                <div className="space-y-6">
-                    <h3 className="text-cyan-400 font-bold text-lg uppercase tracking-wide">
-                        Training Progress Over Epochs
-                    </h3>
-
+                <div className="grid grid-cols-2 gap-1">
                     {/* Render a chart for each metric */}
                     {Object.entries(groupedMetrics).map(([metricName, metricHistory]) => (
                         <div key={metricName} className="bg-gray-800/50 rounded-lg p-6">
