@@ -10,7 +10,6 @@ class RunInfo(BaseModel):
     lifecycle_stage: Optional[str] = None
     run_id: Optional[str] = None
     run_name: Optional[str] = None
-    run_uuid: Optional[str] = None
     start_time: Optional[int] = None
     status: Optional[str] = None
     user_id: Optional[str] = None

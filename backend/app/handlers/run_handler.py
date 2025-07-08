@@ -24,7 +24,6 @@ class RunHandler:
                     lifecycle_stage=r.info.lifecycle_stage,
                     run_id=r.info.run_id,
                     run_name=r.info.run_name,
-                    run_uuid=r.info.run_uuid,
                     start_time=r.info.start_time,
                     status=r.info.status,
                     user_id=r.info.user_id

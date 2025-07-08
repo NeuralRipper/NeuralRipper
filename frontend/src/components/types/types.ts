@@ -26,7 +26,6 @@ export interface RunInfo {
     lifecycle_stage?: string;
     run_id?: string;
     run_name?: string;
-    run_uuid?: string;
     start_time?: number;
     status?: string;
     user_id?: string;
