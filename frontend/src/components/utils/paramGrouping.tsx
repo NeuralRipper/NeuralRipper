@@ -7,27 +7,27 @@ const groupParameters = (runParams: Record<string, any>): ParamGroup[] => {
     const paramCategories = {
         core: {
         title: "Core Training",
-        color: "text-blue-400",
+        color: "blue-400",
         keys: ["model_name", "dataset_name", "batch_size", "learning_rate", "epochs", "optimizer", "loss_function", "device", "random_seed", "weight_decay", "momentum"]
         },
         model: {
         title: "Model Architecture", 
-        color: "text-green-400",
+        color: "green-400",
         keys: ["total_parameters", "trainable_parameters", "parameters_millions", "model_size_mb", "flops_millions", "input_size", "use_pretrained", "model_architecture"]
         },
         system: {
         title: "System Hardware",
-        color: "text-purple-400", 
+        color: "purple-400", 
         keys: ["cpu_count", "memory_total_gb", "platform", "python_version", "pytorch_version", "gpu_name", "gpu_memory_gb", "cuda_version", "num_gpus", "device_type"]
         },
         data: {
         title: "Data Pipeline",
-        color: "text-yellow-400",
+        color: "yellow-400",
         keys: ["train_size", "val_size", "total_samples", "num_workers"]
         },
         environment: {
         title: "Environment",
-        color: "text-cyan-400",
+        color: "cyan-400",
         keys: ["git_commit", "git_branch", "mlflow_uri", "experiment_name"]
         }
     }
@@ -61,7 +61,7 @@ const groupParameters = (runParams: Record<string, any>): ParamGroup[] => {
     if (Object.keys(ungroupedParams).length > 0) {
         groups.push({
         title: "Other",
-        color: "text-gray-400",
+        color: "-gray-400",
         params: ungroupedParams
         });
     }
