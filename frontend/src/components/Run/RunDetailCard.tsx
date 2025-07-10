@@ -146,14 +146,14 @@ const RunDetailCard: React.FC<RunDetailCardProps> = ({selectedRunId}) => {
             </h3>
             {/* Training Progress Charts */}
             {Object.keys(groupedMetrics).length > 0 && (
-                <div className="grid grid-cols-2 gap-1">
+                <div className="grid grid-cols-3 gap-1">
                     {/* Render a chart for each metric */}
                     {Object.entries(groupedMetrics).map(([metricName, metricHistory]) => (
-                        <div key={metricName} className="bg-gray-800/50 rounded-lg p-6">
-                            <h4 className="text-cyan-400 font-bold mb-4 uppercase tracking-wide">
+                        <div key={metricName} className="bg-gray-800/50 rounded-lg justify-center flex-col items-center p-3">
+                            <h4 className="text-cyan-400 text-sm font-bold mb-1.5 uppercase tracking-wide">
                                 {metricName.replace('_', ' ')} {/* train_accuracy → train accuracy */}
                             </h4>
-                            <div className="h-64">
+                            <div className="w-full h-48">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <LineChart data={metricHistory}>
                                         {/* Grid lines */}

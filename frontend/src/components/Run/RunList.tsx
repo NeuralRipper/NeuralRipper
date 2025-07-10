@@ -8,10 +8,9 @@ const RunList: React.FC<RunListProps> = ({experimentId, onSelectedRunId}) => {
     const [runs, setRuns] = useState<Run[]>([]);
 
     useEffect(() => {
-        // only use for this useEffect hook
+        // Only use for this useEffect hook
         const getRuns = async () => {
             try {
-                console.log(API_BASE_URL)
                 const url = `${API_BASE_URL}/runs/list/${experimentId}`;
                 const response = await fetch(url);
 
@@ -19,8 +18,10 @@ const RunList: React.FC<RunListProps> = ({experimentId, onSelectedRunId}) => {
                     console.log(`Fetch Failed: ${response.status}`);
                     return;
                 }
-
                 const data = await response.json();
+                
+                // Sort Runs by time
+                data.sort((a: Run, b: Run) => Number(a.info?.end_time) - Number(b.info?.end_time))
                 setRuns(data);
             } catch (error) {
                 console.error('Error fetching runs:', error);
@@ -29,6 +30,15 @@ const RunList: React.FC<RunListProps> = ({experimentId, onSelectedRunId}) => {
 
         getRuns();
     }, [experimentId]);
+
+    useEffect(() => {
+        if (runs.length === 0 || runs[0]?.info?.run_id === undefined || runs[0]?.info?.run_id === "") {
+            return;
+        }
+        // Render the first RunDetail from current Experiment by default
+        onSelectedRunId(runs[0]?.info?.run_id)
+    }, [runs])
+
 
     if (runs.length === 0) {
         return (

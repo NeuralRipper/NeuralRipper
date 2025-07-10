@@ -18,20 +18,20 @@ const RunMetrics: React.FC<SystemParamsProps> = ({ runParams }) => {
 
     return (
         // IMPORTANT: grid with 2 columns for each group of params
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-1.5">
             {groups.map((group) => (
-                <div key={group.title} className={`bg-gray-800/50 rounded-lg p-6 hover:border ${colorMap[group.color as keyof typeof colorMap]}`}>
-                    <h3 className={`text-${group.color} font-bold text-lg mb-4 uppercase tracking-wide`}>
+                <div key={group.title} className={` bg-gray-800/40 rounded-lg p-3.5 hover:border ${colorMap[group.color as keyof typeof colorMap]}`}>
+                    <h3 className={`text-${group.color} font-bold text-md mb-2.5 uppercase tracking-wide`}>
                         {group.title}
                     </h3>
                     {/* IMPORTANT: grid with 4 columns for all params */}
-                    <div className="grid grid-cols-2 gap-1">
+                    <div className="grid grid-cols-2 p-0.5">
                         {Object.entries(group.params).map(([key, value]) => (
-                            <div key={key} className="bg-gray-900/50 rounded p-0.5">
-                                <div className="text-xs text-cyan-300 uppercase tracking-wide mb-1">
+                            <div key={key} className="bg-gray-900/50 rounded">
+                                <div className="text-xs text-cyan-300 uppercase tracking-wide p-0.5">
                                     {formatParamName(key)}
                                 </div>
-                                <div className="text-yellow-400 font-bold">
+                                <div className="text-xs text-yellow-400 font-bold">
                                     {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value)}
                                 </div>
                             </div>
@@ -42,6 +42,5 @@ const RunMetrics: React.FC<SystemParamsProps> = ({ runParams }) => {
         </div>
     );
 }
-
 
 export default RunMetrics;

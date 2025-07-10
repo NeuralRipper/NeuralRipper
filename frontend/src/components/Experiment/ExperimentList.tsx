@@ -17,8 +17,11 @@ const ExperimentList: React.FC<ExperimentListProps> = ({onSelectedExpId, selecte
                     console.log(`Fetch Failed: ${response.status}`);
                     return;
                 }
-
                 const data = await response.json();
+
+                // Sort the experiments by experimentID
+                data.sort((a: Experiment, b: Experiment) => Number(a.id) - Number(b.id));
+
                 setExperiments(data);
             } catch (error) {
                 console.error('Error fetching experiments:', error);
@@ -26,9 +29,15 @@ const ExperimentList: React.FC<ExperimentListProps> = ({onSelectedExpId, selecte
         };
 
         getExperimentList();
-
     }, [setExperiments]);
 
+    useEffect(() => {
+        if (experiments.length === 0) {
+            return;
+        }
+        // Render the first experiment by default
+        onSelectedExpId(experiments[0]?.id)
+    }, [experiments])
 
     return (
         <div className="grid gap-1">
