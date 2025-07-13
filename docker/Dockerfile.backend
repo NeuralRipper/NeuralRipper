@@ -1,7 +1,7 @@
 FROM python:3.11.13
 
 # Copy src dest
-COPY backend/ /app
+COPY ../backend/ /app
 
 WORKDIR /app
 
