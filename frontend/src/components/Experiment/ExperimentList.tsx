@@ -1,5 +1,5 @@
 import {useEffect, useState} from "react";
-import ExperimentCard from "./ExperimentCard";
+import ExperimentCard from "./ExperimentCard.tsx";
 import type {Experiment, ExperimentListProps} from '../types/types.ts';
 import { API_BASE_URL } from "../../config.ts";
 

@@ -1,5 +1,5 @@
-import ExperimentList from "../Experiment/ExperimentList.tsx";
-import RunList from "../Run/RunList.tsx";
+import ExperimentList from "../experiment/ExperimentList.tsx";
+import RunList from "../run/RunList.tsx";
 import type {SidebarProps} from "../types/types.ts";
 
 

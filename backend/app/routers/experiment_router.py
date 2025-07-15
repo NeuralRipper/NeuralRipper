@@ -10,7 +10,7 @@ from app.handlers.experiment_handler import ExperimentHandler
 exp_handler = ExperimentHandler()
 
 # tags for auto doc grouping
-router = APIRouter(prefix="/experiments", tags=["experiment"])
+router = APIRouter(prefix="/experiments", tags=["mlflow"])
 
 
 @router.get("/")

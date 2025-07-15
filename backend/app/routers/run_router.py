@@ -8,7 +8,7 @@ from app.schemas.run import RunResponse
 from mlflow.exceptions import RestException
 
 handler = RunHandler()
-router = APIRouter(prefix="/runs", tags=["run"])
+router = APIRouter(prefix="/runs", tags=["mlflow"])
 
 
 @router.get("/list/{eid}", response_model=List[RunResponse], status_code=status.HTTP_200_OK)
