@@ -47,8 +47,10 @@ const ExperimentList: React.FC<ExperimentListProps> = ({onSelectedExpId, selecte
         if (experiments.length === 0) {
             return;
         }
-        // Render the first experiment by default
-        onSelectedExpId(experiments[0]?.id)
+        // Only auto-select first experiment if nothing is currently selected
+        if (!selectedExpId) {
+            onSelectedExpId(experiments[0]?.id)
+        }
     }, [experiments])
 
     return (
