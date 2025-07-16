@@ -1,8 +1,5 @@
 import {Brain} from "lucide-react";
 
-
-
-
 const Titlebar = ({ onPageChange }) => {
 
     return (
@@ -17,6 +14,9 @@ const Titlebar = ({ onPageChange }) => {
                     <div className="ml-auto flex gap-6">
                         <h2 onClick={() => onPageChange("rerun")} className="cursor-pointer font-bold bg-gradient-to-r from-purple-500 to-cyan-400 text-transparent bg-clip-text">
                             Echo
+                        </h2>
+                        <h2 onClick={() => onPageChange('infer')} className="cursor-pointer font-bold bg-gradient-to-r from-purple-500 to-cyan-400 text-transparent bg-clip-text">
+                            Infer
                         </h2>
                         <h2 onClick={() => onPageChange('about')} className="cursor-pointer font-bold bg-gradient-to-r  from-purple-500 to-cyan-400 text-transparent bg-clip-text">
                             About

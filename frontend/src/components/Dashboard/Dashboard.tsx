@@ -10,7 +10,6 @@ const Dashboard: React.FC = () => {
     const [selectedRunId, setSelectedRunId] = useState("");
     const [currentPage, setCurrentPage] = useState("home");
 
-
     return (
         <div className="font-cyber min-h-screen bg-gray-950 text-gray-100">
             <Titlebar onPageChange={setCurrentPage} />
@@ -30,7 +29,11 @@ const Dashboard: React.FC = () => {
                             <RunDetailCard selectedRunId={selectedRunId}/>
                         </div>
                     </main>
-                </div> : <div>404</div>
+                </div> 
+                : currentPage === "infer" ? <div className="flex">
+                    TODO, inference interactive page here
+                </div>
+                : <div>404</div>
             }
         </div>
     );
