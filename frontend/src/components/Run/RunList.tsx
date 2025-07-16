@@ -38,7 +38,8 @@ const RunList: React.FC<RunListProps> = ({experimentId, onSelectedRunId, selecte
             } catch(e) {
                 console.error("Failed to fetch run data.")
             }         
-        }, 30000)
+        }, 60000)
+        
         return () => clearInterval(intervalId);
     }, [experimentId]);
 

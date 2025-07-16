@@ -38,7 +38,7 @@ const ExperimentList: React.FC<ExperimentListProps> = ({onSelectedExpId, selecte
             } catch(e) {
                 console.log("Failed to fetch experiment list.")
             }
-        }, 30000)
+        }, 60000)
 
         return () => clearInterval(intervalId);
     }, []);

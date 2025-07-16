@@ -45,11 +45,15 @@ const RunDetailCard: React.FC<RunDetailCardProps> = ({selectedRunId}) => {
         };
         
         try {
-            setInterval(() => {
+            fetchAllData();     // fetch once mounted
+
+            const intervalId = setInterval(() => {
                 if (runId) {
                     fetchAllData()
                 }
-            }, 3000);
+            }, 5000);
+
+            return () => clearInterval(intervalId);
         } catch (e) {
             console.error(`Failed to fetch errors, ${e}`)
         }
