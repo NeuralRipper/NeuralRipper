@@ -7,28 +7,39 @@ import { API_BASE_URL } from "../../config.ts";
 const RunList: React.FC<RunListProps> = ({experimentId, onSelectedRunId, selectedRunId}) => {
     const [runs, setRuns] = useState<Run[]>([]);
 
-    useEffect(() => {
-        // Only use for this useEffect hook
-        const getRuns = async () => {
-            try {
-                const url = `${API_BASE_URL}/runs/list/${experimentId}`;
-                const response = await fetch(url);
+    const getRuns = async () => {
+        try {
+            const url = `${API_BASE_URL}/runs/list/${experimentId}`;
+            const response = await fetch(url);
 
-                if (!response.ok) {
-                    console.log(`Fetch Failed: ${response.status}`);
-                    return;
-                }
-                const data = await response.json();
-                
-                // Sort Runs by time
-                data.sort((a: Run, b: Run) => Number(a.info?.end_time) - Number(b.info?.end_time))
-                setRuns(data);
-            } catch (error) {
-                console.error('Error fetching runs:', error);
+            if (!response.ok) {
+                console.log(`Fetch Failed: ${response.status}`);
+                return;
             }
-        };
+            const data = await response.json();
+            
+            // Sort Runs by time
+            data.sort((a: Run, b: Run) => Number(a.info?.end_time) - Number(b.info?.end_time))
+            setRuns(data);
+        } catch (error) {
+            console.error('Error fetching runs:', error);
+        }
+    };
 
+    useEffect(() => {
+        // Fetch once mounted
         getRuns();
+
+        // IMPORTANT: setInterval only called inside useEffect to avoid multiple intervals
+        const intervalId = setInterval(() => {
+            try {
+                console.log("Fetching run list...")
+                getRuns();
+            } catch(e) {
+                console.error("Failed to fetch run data.")
+            }         
+        }, 30000)
+        return () => clearInterval(intervalId);
     }, [experimentId]);
 
     useEffect(() => {

@@ -7,29 +7,41 @@ const ExperimentList: React.FC<ExperimentListProps> = ({onSelectedExpId, selecte
 
     const [experiments, setExperiments] = useState<Experiment[]>([]);
 
-    useEffect(() => {
-        const getExperimentList = async (): Promise<void> => {
-            try {
-                const url = `${API_BASE_URL}/experiments/`;
-                const response = await fetch(url);
+    const getExperimentList = async (): Promise<void> => {
+        try {
+            const url = `${API_BASE_URL}/experiments/`;
+            const response = await fetch(url);
 
-                if (!response.ok) {
-                    console.log(`Fetch Failed: ${response.status}`);
-                    return;
-                }
-                const data = await response.json();
-
-                // Sort the experiments by experimentID
-                data.sort((a: Experiment, b: Experiment) => Number(a.id) - Number(b.id));
-
-                setExperiments(data);
-            } catch (error) {
-                console.error('Error fetching experiments:', error);
+            if (!response.ok) {
+                console.log(`Fetch Failed: ${response.status}`);
+                return;
             }
-        };
+            const data = await response.json();
 
+            // Sort the experiments by experimentID
+            data.sort((a: Experiment, b: Experiment) => Number(a.id) - Number(b.id));
+
+            setExperiments(data);
+        } catch (error) {
+            console.error('Error fetching experiments:', error);
+        }
+    };
+
+    useEffect(() => {
+        // Fetch once mounted
         getExperimentList();
-    }, [setExperiments]);
+        // IMPORTANT: only call setInterval inside useEffect with NO dependencies, so it won't create multiple intervals
+        const intervalId = setInterval(() => {
+            try {
+                console.log("Fetching experiment list...")
+                getExperimentList();        
+            } catch(e) {
+                console.log("Failed to fetch experiment list.")
+            }
+        }, 30000)
+
+        return () => clearInterval(intervalId);
+    }, []);
 
     useEffect(() => {
         if (experiments.length === 0) {

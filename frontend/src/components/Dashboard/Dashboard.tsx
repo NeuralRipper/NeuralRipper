@@ -32,8 +32,6 @@ const Dashboard: React.FC = () => {
                     </main>
                 </div> : <div>404</div>
             }
-
-
         </div>
     );
 };
