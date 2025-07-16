@@ -47,10 +47,11 @@ const RunList: React.FC<RunListProps> = ({experimentId, onSelectedRunId, selecte
         if (runs.length === 0 || runs[0]?.info?.run_id === undefined || runs[0]?.info?.run_id === "") {
             return;
         }
-        // Render the first RunDetail from current Experiment by default
-        onSelectedRunId(runs[0]?.info?.run_id)
+        // Render the first RunDetail from current Experiment by default if nothng is selected, otherwise we stay with the same id
+        if (!selectedRunId || selectedRunId === "") {
+            onSelectedRunId(runs[0]?.info?.run_id);
+        }
     }, [runs])
-
 
     if (runs.length === 0) {
         return (

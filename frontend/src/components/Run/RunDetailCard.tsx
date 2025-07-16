@@ -1,5 +1,5 @@
 import {CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from "recharts";
-import {useEffect, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import {Activity, BarChart3, Cpu, Target, TrendingUp} from 'lucide-react';
 import type {MetricList, RunDetailCardProps} from "../types/types.ts";
 import { API_BASE_URL } from "../../config.ts";
@@ -11,22 +11,45 @@ const RunDetailCard: React.FC<RunDetailCardProps> = ({selectedRunId}) => {
     const [runData, setRunData] = useState<{data: any} | null>(null);
     const [runMetricList, setRunMetricList] = useState<MetricList | null>(null);
 
+    // Store the interval ID persistently
+    const intervalRef = useRef<number | null>(null)     // pnpm install --save-dev @types/node
+
+    // Track current runId to ignore stale responses
+    const currentRunIdRef = useRef<string>("");
+
     // TODO: reduce and clean up this file
     // TODO: RunList Status is not align with the date, fix it
-    // TODO: remove the border of metrics and back the bg darker might help a lot
     // TODO: might need to separate the metrics, like loss, learning rate, acc,to make this cleaner
+    // TODO: should stop fetching once the run turns to Finished
 
     useEffect(() => {
+        // Clear any existing interval first
+        if (intervalRef.current !== null) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+        }
+
         if (!runId || runId === "") {
+            currentRunIdRef.current = "";
             return
         }
 
+        // Update current runId
+        currentRunIdRef.current = runId;
+
         const fetchAllData = async () => {
             try {
+                const requestRunId = currentRunIdRef.current;   // capture at reuqest time
+
                 const [runResponse, metricsResponse] = await Promise.all([
                     fetch(`${API_BASE_URL}/runs/detail/${runId}`),
                     fetch(`${API_BASE_URL}/runs/metrics/${runId}`)
                 ]);
+
+                // Only update state if this is still the current runId
+                if (requestRunId !== currentRunIdRef.current) {
+                    return; // Ignore stale response, solve race condition
+                }
 
                 if (runResponse.ok) {
                     const runData = await runResponse.json();
@@ -44,19 +67,23 @@ const RunDetailCard: React.FC<RunDetailCardProps> = ({selectedRunId}) => {
             }
         };
         
-        try {
-            fetchAllData();     // fetch once mounted
+        fetchAllData();     // fetch once mounted
 
-            const intervalId = setInterval(() => {
-                if (runId) {
-                    fetchAllData()
-                }
-            }, 5000);
+        // Save new interval id into reference
+        intervalRef.current = setInterval(() => {
+            if (runId) {
+                fetchAllData()
+            }
+        }, 5000);
 
-            return () => clearInterval(intervalId);
-        } catch (e) {
-            console.error(`Failed to fetch errors, ${e}`)
+        // clean up function
+        return () => {
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+            }
         }
+
     }, [runId]);
 
     // 1. Group metrics by key (like groupby in pandas)
