@@ -34,6 +34,7 @@ export interface RunInfo {
 export interface RunListProps {
     experimentId: string;
     onSelectedRunId: React.Dispatch<React.SetStateAction<string>>;
+    selectedRunId: string;
 }
 
 export interface RunData {
@@ -56,6 +57,7 @@ export interface ExperimentCardProps {
 export interface RunListCardProps {
     run: Run;
     onSelectedRunId: React.Dispatch<React.SetStateAction<string>>;
+    selectedRunId: string;
 }
 
 export interface FilterCardProps {
@@ -84,6 +86,7 @@ export interface SidebarProps {
     onSelectedExpId: React.Dispatch<React.SetStateAction<string>>;
     onSelectedRunId: React.Dispatch<React.SetStateAction<string>>;
     selectedExpId: string;
+    selectedRunId: string;
 }
 
 export interface SystemParamsProps {

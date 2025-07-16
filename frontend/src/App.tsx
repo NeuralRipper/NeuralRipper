@@ -10,3 +10,7 @@ const App: React.FC = () => {
 };
 
 export default App;
+
+
+// TODO: sort RunList inorder, running > finish > fail > time
+// TODO: GCP compute engine, migrate container/image

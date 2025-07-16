@@ -8,14 +8,13 @@ import RunMetrics from "./RunMetrics.tsx";
 
 const RunDetailCard: React.FC<RunDetailCardProps> = ({selectedRunId}) => {
     const runId = selectedRunId;
-    const [runData, setRunData] = useState(null);
+    const [runData, setRunData] = useState<{data: any} | null>(null);
     const [runMetricList, setRunMetricList] = useState<MetricList | null>(null);
 
     // TODO: reduce and clean up this file
     // TODO: RunList Status is not align with the date, fix it
     // TODO: remove the border of metrics and back the bg darker might help a lot
     // TODO: might need to separate the metrics, like loss, learning rate, acc,to make this cleaner
-    // TODO: realtime update of the graph?
 
     useEffect(() => {
         if (!runId || runId === "") {
@@ -44,10 +43,6 @@ const RunDetailCard: React.FC<RunDetailCardProps> = ({selectedRunId}) => {
                 console.error('Error during parallel fetch:', error);
             }
         };
-
-        // if (runId) {
-        //     fetchAllData();
-        // }
         
         try {
             setInterval(() => {
@@ -58,8 +53,6 @@ const RunDetailCard: React.FC<RunDetailCardProps> = ({selectedRunId}) => {
         } catch (e) {
             console.error(`Failed to fetch errors, ${e}`)
         }
-
-
     }, [runId]);
 
     // 1. Group metrics by key (like groupby in pandas)

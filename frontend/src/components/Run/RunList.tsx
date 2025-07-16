@@ -4,7 +4,7 @@ import type {RunListProps, Run} from '../types/types.ts';
 import { API_BASE_URL } from "../../config.ts";
 
 
-const RunList: React.FC<RunListProps> = ({experimentId, onSelectedRunId}) => {
+const RunList: React.FC<RunListProps> = ({experimentId, onSelectedRunId, selectedRunId}) => {
     const [runs, setRuns] = useState<Run[]>([]);
 
     useEffect(() => {
@@ -51,7 +51,7 @@ const RunList: React.FC<RunListProps> = ({experimentId, onSelectedRunId}) => {
     return (
         <div>
             {runs.map(run => (
-                <RunListCard key={run?.info?.run_id} run={run} onSelectedRunId={onSelectedRunId}/>
+                <RunListCard key={run?.info?.run_id} run={run} onSelectedRunId={onSelectedRunId} selectedRunId={selectedRunId}/>
             ))}
         </div>
     );

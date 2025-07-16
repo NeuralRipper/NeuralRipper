@@ -4,7 +4,7 @@ import formatDate from "../utils/format.tsx";
 import statusStyles from "../types/statusStyles.ts";
 
 
-const RunListCard: React.FC<RunListCardProps> = ({run, onSelectedRunId}) => {
+const RunListCard: React.FC<RunListCardProps> = ({run, onSelectedRunId, selectedRunId}) => {
     const {RunStatusStyles} = statusStyles;       // Destructure
     // Handle potentially missing info
     const runInfo = run.info;
@@ -18,8 +18,11 @@ const RunListCard: React.FC<RunListCardProps> = ({run, onSelectedRunId}) => {
     }
 
     return (
-        <div
-            className="bg-gray-900 border border-gray-600/40 rounded-md hover:bg-gray-600/50 transition-colors font-mono mb-0.5">
+        <div className={`rounded-md transition-colors font-mono mb-0.5 ${
+            selectedRunId === runId 
+                ? 'bg-cyan-500/10 border border-cyan-500/50' 
+                : 'bg-gray-800/50 hover:bg-gray-700/50'
+        }`}>
 
             <button
                 onClick={handleRunClick}

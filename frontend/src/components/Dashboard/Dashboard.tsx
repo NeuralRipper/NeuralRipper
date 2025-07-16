@@ -23,6 +23,7 @@ const Dashboard: React.FC = () => {
                         onSelectedExpId={setSelectedExpId}
                         onSelectedRunId={setSelectedRunId}
                         selectedExpId={selectedExpId}
+                        selectedRunId={selectedRunId}
                     />
                     <main className="flex-1 bg-gray-900/30">
                         <div className="p-6">
