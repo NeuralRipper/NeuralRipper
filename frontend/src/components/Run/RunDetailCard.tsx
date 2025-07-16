@@ -45,9 +45,21 @@ const RunDetailCard: React.FC<RunDetailCardProps> = ({selectedRunId}) => {
             }
         };
 
-        if (runId) {
-            fetchAllData();
+        // if (runId) {
+        //     fetchAllData();
+        // }
+        
+        try {
+            setInterval(() => {
+                if (runId) {
+                    fetchAllData()
+                }
+            }, 3000);
+        } catch (e) {
+            console.error(`Failed to fetch errors, ${e}`)
         }
+
+
     }, [runId]);
 
     // 1. Group metrics by key (like groupby in pandas)
