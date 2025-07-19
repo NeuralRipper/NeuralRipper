@@ -3,6 +3,7 @@ import RunDetailCard from "../run/RunDetailCard.tsx";
 import Sidebar from "../bars/Sidebar.tsx";
 import Titlebar from "../bars/Titlebar.tsx";
 import {useState} from "react";
+import Rerun from "../run/Rerun.tsx";
 
 
 const Dashboard: React.FC = () => {
@@ -30,8 +31,8 @@ const Dashboard: React.FC = () => {
                         </div>
                     </main>
                 </div> 
-                : currentPage === "infer" ? <div className="flex">
-                    TODO, inference interactive page here
+                : currentPage === "Echo" ? <div className="flex">
+                    <Rerun />
                 </div>
                 : <div>404</div>
             }

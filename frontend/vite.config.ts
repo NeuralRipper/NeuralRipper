@@ -9,6 +9,9 @@ export default defineConfig({
   preview: {
     allowedHosts: true  // Allow all hosts
   },
+  optimizeDeps: {
+    exclude: ['@rerun-io/web-viewer-react']
+  },
   server: {
     allowedHosts: true  // Allow all hosts
   }
