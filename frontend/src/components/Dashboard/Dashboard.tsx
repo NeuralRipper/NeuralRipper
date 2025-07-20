@@ -4,6 +4,7 @@ import Sidebar from "../bars/Sidebar.tsx";
 import Titlebar from "../bars/Titlebar.tsx";
 import {useState} from "react";
 import Rerun from "../run/Rerun.tsx";
+import StreamingTerminal from "./Terminal.tsx";
 
 
 const Dashboard: React.FC = () => {
@@ -14,6 +15,7 @@ const Dashboard: React.FC = () => {
     return (
         <div className="font-cyber min-h-screen bg-gray-950 text-gray-100">
             <Titlebar onPageChange={setCurrentPage} />
+            {/* <StreamingTerminal selectedModel={"GPT2-conversational"}/> */}
             {/*flexible horizontally*/}
             {
                 currentPage === "about" 

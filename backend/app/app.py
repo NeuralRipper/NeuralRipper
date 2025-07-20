@@ -3,14 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 
 from app.routers import experiment_router, run_router
-from app.routers import rerun_router
 
 # orjson.dumps() 4x Faster serialization of JSON
 # at the global level compared to json.dumps()
 app = FastAPI(default_response_class=ORJSONResponse)
 app.include_router(experiment_router.router)
 app.include_router(run_router.router)
-app.include_router(rerun_router.router)
 
 # Mind, different port is also different origin
 origins = [
