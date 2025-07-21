@@ -7,10 +7,7 @@ def convert(timestamp):
 
     # Convert to datetime, mind millisecond
     dt = datetime.fromtimestamp(timestamp / 1000, tz=pst)
-    print(dt)
     # ISO format
     iso_str = dt.isoformat()
 
     return iso_str
-
-
