@@ -12,7 +12,7 @@ const Titlebar = ({ onPageChange }) => {
                     </h1>
 
                     <div className="ml-auto flex gap-6">
-                        <h2 onClick={() => onPageChange("Echo")} className="cursor-pointer font-bold bg-gradient-to-r from-purple-500 to-cyan-400 text-transparent bg-clip-text">
+                        <h2 onClick={() => onPageChange("echo")} className="cursor-pointer font-bold bg-gradient-to-r from-purple-500 to-cyan-400 text-transparent bg-clip-text">
                             Echo
                         </h2>
                         <h2 onClick={() => onPageChange('infer')} className="cursor-pointer font-bold bg-gradient-to-r from-purple-500 to-cyan-400 text-transparent bg-clip-text">

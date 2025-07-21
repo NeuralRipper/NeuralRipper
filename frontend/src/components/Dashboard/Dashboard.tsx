@@ -15,7 +15,6 @@ const Dashboard: React.FC = () => {
     return (
         <div className="font-cyber min-h-screen bg-gray-950 text-gray-100">
             <Titlebar onPageChange={setCurrentPage} />
-            {/* <StreamingTerminal selectedModel={"GPT2-conversational"}/> */}
             {/*flexible horizontally*/}
             {
                 currentPage === "about" 
@@ -33,10 +32,12 @@ const Dashboard: React.FC = () => {
                         </div>
                     </main>
                 </div> 
-                : currentPage === "Echo" ? <div className="flex">
+                : currentPage === "echo" ? <div className="flex">
                     <Rerun />
                 </div>
+                : currentPage === "infer" ? <StreamingTerminal /> 
                 : <div>404</div>
+                
             }
         </div>
     );
