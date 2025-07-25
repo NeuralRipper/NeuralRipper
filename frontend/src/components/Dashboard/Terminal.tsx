@@ -3,9 +3,9 @@ import { Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 
 const StreamingTerminal = () => {
-    const terminalRef = useRef<HTMLDivElement | null>(null);       // terminalRef.current, the <div> renders
-    const terminalInstance = useRef<Terminal | null>(null);       // terminalInstance the actual Terminal object
-    const inputBufferRef = useRef('');                            // temperoary storage of user input
+    const terminalRef = useRef<HTMLDivElement | null>(null);        // terminalRef.current, the <div> renders
+    const terminalInstance = useRef<Terminal | null>(null);         // terminalInstance the actual Terminal object
+    const inputBufferRef = useRef('');                              // temperoary storage of user input
     const isGeneratingRef = useRef(false);                          // Track if we are currently generating
 
     // Render terminal when component mounted
@@ -24,7 +24,7 @@ const StreamingTerminal = () => {
             terminal.open(terminalRef.current);
             terminalInstance.current = terminal;
             terminal.write("Welcome to the [Neural Ripper] Choom! I'm ur [Ripper Doc]!\r\n");
-            terminal.write("\x1b[38;2;254;240;138m>")
+            terminal.write(`${yellow}>`)
         }
 
         // Handle input, use RGB codes to handle color diff for input/output
@@ -33,8 +33,6 @@ const StreamingTerminal = () => {
 
             if (charCode === 13) { // 13 is Enter, call handler to get stream from backend
                 handlePromptSubmission();
-                // terminal.write('\r\n\x1b[38;2;168;85;247m> ' + inputBufferRef.current + '\r\n>');
-                // inputBufferRef.current = ''
             } else if (charCode === 127) {                      // 127 is backspace
                 if (inputBufferRef.current.length > 0) {
                     inputBufferRef.current = inputBufferRef.current.slice(0, -1)
@@ -42,7 +40,7 @@ const StreamingTerminal = () => {
                 } 
             } else if (charCode >= 32 && charCode <= 126) {     // normal characters
                     inputBufferRef.current += data
-                    terminal.write('\x1b[38;2;254;240;138m' + data + '\x1b[0m');
+                    terminal.write(`${yellow}` + data + '\x1b[0m');
             }
         })
 
@@ -51,32 +49,32 @@ const StreamingTerminal = () => {
         };
     }, []);
 
+    const yellow = '\x1b[38;2;254;240;138m';
+    const cyan = '\x1b[38;2;34;211;238m';
 
     // Handle prompt submission
     const handlePromptSubmission = async () => {
+ 
         const terminal = terminalInstance.current;
         if (!terminal || !inputBufferRef.current.trim()) {
             return;
         }
         
-        // Display the user's prompt
-        terminal.write("\r\n\x1b[38;2;168;85;247m> " + inputBufferRef.current + '\r\n')
-        
         // Show agent is generating
         isGeneratingRef.current = true;
 
         // Show that agent is thinking
-        terminal.write('\x1b[38;2;168;85;247mThinking...\r\n');
+        terminal.write(`\r\n${cyan}>Thinking...\r\n`);
 
         try {
             await streamRespond(inputBufferRef.current);
         } catch(error) {
-            terminal.write('\r\n\x1b[38;2;168;85;247m> Failed to get response from agent')
+            terminal.write(`\r\n${cyan}>Failed to get response from agent`)
             console.log(error);
         }   finally {
             isGeneratingRef.current = false;
             inputBufferRef.current = '';
-            terminal.write('\r\n\x1b[38;2;168;85;247m> ')
+            terminal.write(`\r\n${cyan}>`)
         }
     }
 
@@ -132,14 +130,14 @@ const StreamingTerminal = () => {
             const chunk = decoder.decode(value, {stream: true})
 
             // Write the chunk to terminal in real-time
-            terminal.write('\x1b[32m' + chunk + '\x1b[0m')
+            terminal.write(`${cyan} ${chunk}`)
         }
 
     }
 
     return (
         <div className="bg-slate-900 p-3 rounded-lg">
-        <div ref={terminalRef}></div>
+            <div ref={terminalRef}></div>
         </div>
     );
 };
