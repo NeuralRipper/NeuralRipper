@@ -1,0 +1,37 @@
+services:
+  mlflow:
+    image: gcr.io/mldatamanage/mlflow-server
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+    volumes:
+      - mlflow_data:/data
+
+  backend:
+    image: gcr.io/mldatamanage/backend
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+
+  frontend:
+    image: gcr.io/mldatamanage/frontend
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    restart: unless-stopped
+    depends_on:
+      - frontend
+      - backend
+      - mlflow
+
+volumes:
+  mlflow_data:

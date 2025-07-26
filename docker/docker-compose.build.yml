@@ -1,0 +1,24 @@
+services:
+  mlflow:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.mlflow
+      platforms:                              # build image compatible with linux(amd) platform on mac(arm)
+        - linux/amd64
+    image: gcr.io/mldatamanage/mlflow-server  # Push to GCR
+
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+      platforms:
+        - linux/amd64
+    image: gcr.io/mldatamanage/backend
+  
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+      platforms:
+        - linux/amd64
+    image: gcr.io/mldatamanage/frontend

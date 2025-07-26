@@ -1,7 +1,0 @@
-steps:
-  # Build Frontend
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/frontend', '-f', 'Dockerfile.frontend', '.']
-
-images:
-  - 'gcr.io/$PROJECT_ID/frontend'
