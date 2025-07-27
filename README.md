@@ -49,8 +49,9 @@ docker compose -f docker/docker-compose.build.yml push
 
 1. **Create VM Instance**
    ```bash
-   # e2-small, Ubuntu 22.04, 20GB disk, us-central1-a
+   # e2-small, Ubuntu 22.04, 30GB disk, us-central1-a
    # Enable HTTP/HTTPS traffic
+   # 30GB required for large ML images (6GB+ backend)
    ```
 
 2. **Deploy Application**
@@ -63,6 +64,7 @@ docker compose -f docker/docker-compose.build.yml push
    gcloud auth configure-docker
    
    # Create docker-compose.yml and nginx.conf (see configs below)
+   docker compose pull  # Backend ~6GB due to ML dependencies
    docker compose up -d
    ```
 
@@ -72,6 +74,18 @@ docker compose -f docker/docker-compose.build.yml push
    # Update DNS A record: yourdomain.com → VM_IP
    # Update nginx.conf server_name to your domain
    docker compose restart nginx
+   ```
+
+4. **Enable HTTPS (Optional)**
+   ```bash
+   # Stop containers first
+   docker compose down
+   sudo apt install certbot python3-certbot-nginx
+   sudo certbot --nginx -d yourdomain.com
+   
+   # Update docker-compose.yml to mount SSL certificates
+   # Update nginx.conf for HTTPS (see SSL config below)
+   docker compose up -d
    ```
 
 ### Configuration Files
@@ -135,6 +149,6 @@ http {
 ### Cost Optimization
 
 - **VM**: e2-small (~$15/month) eliminates cold starts
-- **Storage**: 20GB standard disk (~$2/month)
+- **Storage**: 30GB standard disk (~$3/month)
 - **Network**: Minimal egress costs for portfolio traffic
 - **Total**: ~$20/month for always-on deployment
