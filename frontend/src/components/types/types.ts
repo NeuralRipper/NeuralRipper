@@ -78,6 +78,28 @@ export interface MetricList {
     metrics: MetricDetail[];
 }
 
+export interface MetricSummary {
+    metric_names: string[];
+    final_values: Record<string, number>;
+}
+
+export interface SingleMetricProps {
+    runId: string;
+    metricName: string;
+    finalValue: number;
+}
+
+export interface MetricChartProps {
+    runId: string;
+    metricName: string;
+    finalValue: number;
+}
+
+export interface MetricSummary {
+    metric_names: string[];
+    final_values: Record<string, number>;
+}
+
 export interface RunDetailCardProps {
     selectedRunId: string;
 }
@@ -98,3 +120,5 @@ export interface ParamGroup {
     color: string,
     params: Record<string, any>;
 }
+
+

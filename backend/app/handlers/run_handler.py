@@ -1,28 +1,23 @@
-from mlflow import MlflowClient
-from settings import MLFLOW_TRACKING_URI
-from app.schemas.metric import MetricList, MetricDetail
-from app.schemas.run import RunResponse, RunData, RunInfo
+from app.utils.share_mlflow_client import get_mlflow_client
 from mlflow.entities import ViewType
-
+from app.schemas.metric import MetricDetail
+from app.schemas.run import RunResponse, RunData, RunInfo
 
 class RunHandler:
     def __init__(self):
-        self.__client = MlflowClient(MLFLOW_TRACKING_URI)
+        self.__client = get_mlflow_client()
 
     def get_run_list(self, eid):
-        """Get runs with backend sorting"""
         run_ls = self.__client.search_runs(
             experiment_ids=[eid],
             run_view_type=ViewType.ACTIVE_ONLY,
             order_by=["start_time DESC"]
         )
-
-        # Structure must match Nested BaseModel
         return [
             RunResponse(
                 data=RunData(
-                    metrics=r.data.metrics,     # direct assignment of dict to BaseModel
-                    params=r.data.params        # direct assignment of dict to BaseModel
+                    metrics=r.data.metrics,
+                    params=r.data.params
                 ),
                 info=RunInfo(
                     artifact_uri=r.info.artifact_uri,
@@ -42,31 +37,33 @@ class RunHandler:
     def get_run_by_id(self, rid):
         return self.__client.get_run(run_id=rid)
 
-    def get_metrics_by_id(self, rid: str):
-        """OPTIMIZED: Batch metrics with sampling"""
+    def get_metric_names(self, rid: str):
+        """Fast: Just get metric names and final values"""
         try:
             run = self.get_run_by_id(rid)
-            metric_names = list(run.data.metrics.keys())
-            
-            if not metric_names:
-                return MetricList(metrics=[])
-
-            all_metrics = []
-            for metric_name in metric_names:
-                # Get metric history
-                metric_history = self.__client.get_metric_history(run_id=rid, key=metric_name)
-                
-                # Convert to MetricDetail
-                for metric_point in metric_history:
-                    all_metrics.append(MetricDetail(
-                        key=metric_name,
-                        value=metric_point.value,
-                        timestamp=metric_point.timestamp,
-                        step=metric_point.step,
-                        run_id=rid
-                    ))
-
-            return MetricList(metrics=all_metrics)
+            return {
+                "metric_names": list(run.data.metrics.keys()),
+                "final_values": run.data.metrics
+            }
         except Exception as e:
-            print(f"Error fetching metrics for {rid}: {e}")
-            return MetricList(metrics=[])
+            print(f"Error fetching metric names: {e}")
+            return {"metric_names": [], "final_values": {}}
+
+    def get_single_metric(self, rid: str, metric_name: str):
+        """Get single metric history with sampling"""
+        try:
+            metric_history = self.__client.get_metric_history(run_id=rid, key=metric_name)
+            
+            return [
+                MetricDetail(
+                    key=metric_name,
+                    value=point.value,
+                    timestamp=point.timestamp,
+                    step=point.step,
+                    run_id=rid
+                )
+                for point in metric_history
+            ]
+        except Exception as e:
+            print(f"Error fetching {metric_name}: {e}")
+            return []
