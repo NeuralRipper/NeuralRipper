@@ -1,14 +1,17 @@
 FROM python:3.11.13
 
-# Copy src dest
-COPY ../backend/ /app
-
 WORKDIR /app
 
-# install all python packages
+# Copy requirements first (cached unless dependencies change)
+COPY ../backend/requirements.txt .
+
+# Install dependencies (expensive, cached unless requirements.txt changes)
 RUN pip install -r requirements.txt
 
-EXPOSE 8000
+# Copy source code last (only rebuilds on code changes)
+COPY ../backend/ .
 
+EXPOSE 8000
 CMD ["uvicorn", "app.app:app", "--host", "0.0.0.0", "--port", "8000"]
 
+# Now pip install only runs when requirements.txt changes

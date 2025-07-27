@@ -9,24 +9,19 @@ from app.routers.infer_router import lifespan
 # orjson.dumps() 4x Faster serialization of JSON
 # at the global level compared to json.dumps()
 app = FastAPI(default_response_class=ORJSONResponse, lifespan=lifespan)
-app.include_router(experiment_router.router)
-app.include_router(run_router.router)
-app.include_router(infer_router.router)
 
-# Mind, different port is also different origin
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "*"
-]
-
+# Add CORS middleware FIRST, before including routers
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],        # allow all sources
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(experiment_router.router)
+app.include_router(run_router.router)
+app.include_router(infer_router.router)
 
 
 @app.get("/")
