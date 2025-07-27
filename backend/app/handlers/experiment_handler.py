@@ -1,17 +1,17 @@
-from mlflow import MlflowClient
-from settings import MLFLOW_TRACKING_URI
+from app.utils.share_mlflow_client import get_mlflow_client
 from app.schemas.experiment import ExperimentResponse
 from app.utils.time_convert import convert
 
-
 class ExperimentHandler:
     def __init__(self):
-        self.__client = MlflowClient(MLFLOW_TRACKING_URI)
+        self.__client = get_mlflow_client()  # Shared client
 
     def get_experiment_list(self):
-        exp_ls = self.__client.search_experiments()
+        """Simple experiment list - no pagination needed for 10-30 experiments"""
+        exp_ls = self.__client.search_experiments(
+            order_by=["last_update_time DESC"]
+        )
 
-        # wrap up with basemodel for fastapi
         return [
             ExperimentResponse(
                 id=exp.experiment_id,
