@@ -10,6 +10,7 @@ const ExperimentList: React.FC<ExperimentListProps> = ({onSelectedExpId, selecte
     const getExperimentList = async (): Promise<void> => {
         try {
             const url = `${API_BASE_URL}/experiments/`;
+            console.log(`Experiement list url: ${url}`)
             const response = await fetch(url);
 
             if (!response.ok) {
@@ -17,7 +18,8 @@ const ExperimentList: React.FC<ExperimentListProps> = ({onSelectedExpId, selecte
                 return;
             }
             const data = await response.json();
-
+            console.log(`Experiment list return data: ${data}`)
+            
             // Sort the experiments by experimentID
             data.sort((a: Experiment, b: Experiment) => Number(a.id) - Number(b.id));
 

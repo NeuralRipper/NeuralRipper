@@ -114,3 +114,14 @@ class TextModelHandler:
         
         # Ensure task ends well
         future.result()
+
+    def shutdown(self):
+        """Cleanup resources on shutdown"""
+        try:
+            if hasattr(self, 'model'):
+                del self.model
+            if hasattr(self, 'tokenizer'):
+                del self.tokenizer
+            print("TextModelHandler shutdown complete")
+        except Exception as e:
+            print(f"Error during TextModelHandler shutdown: {e}")

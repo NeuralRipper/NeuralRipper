@@ -14,7 +14,7 @@ services:
       - "8000:8000"
     restart: unless-stopped
     environment:
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - MLFLOW_TRACKING_URI=http://mlflow:5000  # Set the env var
 
   frontend:
     image: gcr.io/mldatamanage/frontend
