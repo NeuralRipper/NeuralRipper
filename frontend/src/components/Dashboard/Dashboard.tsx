@@ -35,9 +35,12 @@ const Dashboard: React.FC = () => {
                 : currentPage === "echo" ? <div className="flex">
                     <Rerun />
                 </div>
-                : currentPage === "infer" ? <StreamingTerminal /> 
+                : currentPage === "infer" ? <div className="flex items-center justify-center min-h-screen">
+                    <div className="w-full max-w-4xl">
+                        <StreamingTerminal /> 
+                    </div>
+                </div>
                 : <div>404</div>
-                
             }
         </div>
     );

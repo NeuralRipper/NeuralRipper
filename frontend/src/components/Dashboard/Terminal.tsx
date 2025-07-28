@@ -116,6 +116,7 @@ const StreamingTerminal = () => {
 
         // Text decoder to convert bytes to string
         const decoder = new TextDecoder();
+        terminal.write('\r\n');     // Start on new line after "Thinking"
 
         while (true) {
             // Read next chunk of stream, async, will wait fro the next piece of data
@@ -130,9 +131,9 @@ const StreamingTerminal = () => {
             const chunk = decoder.decode(value, {stream: true})
 
             // Write the chunk to terminal in real-time
-            terminal.write(`${cyan} ${chunk}`)
+            const formatted = chunk.replace('\n\g', '\r\n')
+            terminal.write(`${cyan} ${formatted}`)
         }
-
     }
 
     return (
