@@ -1,1 +1,1 @@
-MLFLOW_TRACKING_URI = "https://mlflow-server-631028107267.us-central1.run.app/"
+MLFLOW_TRACKING_URI = "https://neuralripper.com/mlflow/"

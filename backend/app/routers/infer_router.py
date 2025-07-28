@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from contextlib import asynccontextmanager
 from fastapi.responses import StreamingResponse
 import mlflow
+from settings import MLFLOW_TRACKING_URI
 
 from app.handlers.text_model_handler import TextModelHandler
 
@@ -12,7 +13,7 @@ handler = TextModelHandler()
 def get_default_text_model():
     """Get the first available text model from MLflow"""
     try:
-        mlflow.set_tracking_uri("https://mlflow-server-631028107267.us-central1.run.app/")
+        mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
         
         # Search for registered models
         models = mlflow.search_registered_models()
