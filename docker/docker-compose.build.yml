@@ -1,25 +1,21 @@
-# build.yml used to build and push to GCR
 services:
   mlflow:
     build:
       context: ..
       dockerfile: docker/Dockerfile.mlflow
-      platforms:                              # build image compatible with linux(amd) platform on mac(arm)
-        - linux/amd64
-    image: gcr.io/mldatamanage/mlflow-server  # Push to GCR
+      platforms: [linux/amd64]
+    image: 970547374353.dkr.ecr.us-west-2.amazonaws.com/neuralripper:mlflow   # Pull from ECR
 
   backend:
     build:
       context: ..
       dockerfile: docker/Dockerfile.backend
-      platforms:
-        - linux/amd64
-    image: gcr.io/mldatamanage/backend
+      platforms: [linux/amd64]
+    image: 970547374353.dkr.ecr.us-west-2.amazonaws.com/neuralripper:backend  # Pull from ECR
   
   frontend:
     build:
       context: ..
       dockerfile: docker/Dockerfile.frontend
-      platforms:
-        - linux/amd64
-    image: gcr.io/mldatamanage/frontend
+      platforms: [linux/amd64]
+    image: 970547374353.dkr.ecr.us-west-2.amazonaws.com/neuralripper:frontend  # Pull from ECR

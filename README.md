@@ -7,14 +7,14 @@ A comprehensive machine learning platform featuring experiment tracking, real-ti
 - **Dashboard**: Real-time experiment tracking with live metrics and charts
 - **Model Inference**: Text-based model inference with streaming terminal interface
 - **Computer Vision Demo**: YOLO detection and Rerun visualizations for images/videos
-- **MLflow Integration**: Complete experiment lifecycle management with GCS artifact storage
+- **MLflow Integration**: Complete experiment lifecycle management with S3 artifact storage
 
 ## Architecture
 
 - **Backend**: FastAPI with MLflow tracking server
 - **Frontend**: React with real-time updates and interactive components
-- **Storage**: Google Cloud Storage for model artifacts
-- **Deployment**: Docker containers on GCP Compute Engine
+- **Storage**: AWS S3 for model artifacts
+- **Deployment**: Docker containers on AWS Lightsail
 
 ## Quick Start
 
@@ -30,62 +30,147 @@ cd backend && pip install -r requirements.txt && uvicorn app.app:app --reload
 
 Access at `http://localhost:3000`
 
-## Deployment to GCP
+## Deployment to AWS
 
 ### Prerequisites
-- GCP project with billing enabled
+- AWS account with billing enabled
 - Docker installed locally
 - Domain name (optional)
+
+### Setup AWS CLI
+
+```bash
+# Install AWS CLI v2
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip && sudo ./aws/install
+
+# Configure credentials (create IAM user with ECR permissions)
+aws configure
+# Enter: Access Key ID, Secret Access Key, us-west-2, json
+```
 
 ### Build & Push Images
 
 ```bash
+# Create ECR repository
+aws ecr create-repository --repository-name neuralripper
+
+# Login to ECR
+aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com
+
 # Build for AMD64 platform
 docker compose -f docker/docker-compose.build.yml build
 docker compose -f docker/docker-compose.build.yml push
 ```
 
-### VM Setup
+### Lightsail Setup
 
-1. **Create VM Instance**
+1. **Create Lightsail Instance**
    ```bash
-   # e2-small, Ubuntu 22.04, 30GB disk, us-central1-a
+   # 2 vCPU, 4GB RAM, 40GB SSD (~$20/month)
+   # Ubuntu 22.04, us-west-2
    # Enable HTTP/HTTPS traffic
-   # 30GB required for large ML images (6GB+ backend)
    ```
 
 2. **Deploy Application**
    ```bash
-   # SSH to VM
-   gcloud compute ssh your-vm-name
+   # SSH to Lightsail
+   ssh -i your-key.pem ubuntu@your-lightsail-ip
+   
+   # Set up Docker apt respository
+     # Add Docker's official GPG key:
+     sudo apt-get update
+     sudo apt-get install ca-certificates curl
+     sudo install -m 0755 -d /etc/apt/keyrings
+     sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+     sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+     # Add the repository to Apt sources:
+     echo \
+     "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+     $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+     sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+     sudo apt-get update
+
+   # Install Docker
+   sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+   sudo usermod -aG docker ubuntu && newgrp docker
+
+   # Start Docker and make it auto launch
+   sudo systemctl start docker
+   sudo systemctl enable docker
+   
+   # Install AWS CLI and login
+   curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+   unzip awscliv2.zip
+   sudo ./aws/install
+   aws configure  # Same credentials as local
+   
+   # ECR login
+   aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com
    
    # Create deployment
-   mkdir ml-portfolio && cd ml-portfolio
-   gcloud auth configure-docker
-   
+   mkdir neuralripper && cd neuralripper
    # Create docker-compose.yml and nginx.conf (see configs below)
-   docker compose pull  # Backend ~6GB due to ML dependencies
+   docker compose pull
    docker compose up -d
    ```
 
-3. **Set Static IP & Domain**
-   ```bash
-   # Reserve static IP in GCP Console
-   # Update DNS A record: yourdomain.com → VM_IP
-   # Update nginx.conf server_name to your domain
-   docker compose restart nginx
-   ```
+3. **Domain Setup & SSL Configuration**
 
-4. **Enable HTTPS (Optional)**
+   **Step 1: Configure Domain DNS**
    ```bash
-   # Stop containers first
-   docker compose down
-   sudo apt install certbot python3-certbot-nginx
-   sudo certbot --nginx -d yourdomain.com
+   # Get your Lightsail static IP
+   # In Lightsail Console: Networking > Create static IP > Attach to instance
    
-   # Update docker-compose.yml to mount SSL certificates
-   # Update nginx.conf for HTTPS (see SSL config below)
+   # Update your domain provider (GoDaddy, Namecheap, etc.):
+   # A Record: @ (or yourdomain.com) → YOUR_LIGHTSAIL_STATIC_IP
+   # A Record: www → YOUR_LIGHTSAIL_STATIC_IP
+   
+   # Verify DNS propagation (may take 5-60 minutes)
+   dig yourdomain.com
+   nslookup yourdomain.com
+   ```
+
+   **Step 2: Install Certbot & Generate SSL Certificates**
+   ```bash
+   # SSH to your Lightsail instance
+   ssh -i your-key.pem ubuntu@your-lightsail-ip
+   
+   # Stop nginx container temporarily
+   docker compose stop nginx
+   
+   # Install certbot
+   sudo apt update
+   sudo apt install certbot -y
+   
+   # Generate SSL certificates (standalone mode)
+   sudo certbot certonly --standalone -d yourdomain.com -d www.yourdomain.com
+   
+   # Certificates will be saved to:
+   # /etc/letsencrypt/live/yourdomain.com/fullchain.pem
+   # /etc/letsencrypt/live/yourdomain.com/privkey.pem
+   ```
+
+   **Step 3: Update Nginx Configuration**
+   ```bash
+   # Update nginx.conf with your domain name and SSL paths
+   # Then restart containers
    docker compose up -d
+   
+   # Test HTTPS
+   curl -I https://yourdomain.com
+   ```
+
+   **Step 4: Auto-renewal Setup**
+   ```bash
+   # Test renewal
+   sudo certbot renew --dry-run
+   
+   # Set up auto-renewal (certificates expire every 90 days)
+   sudo crontab -e
+   # Add this line:
+   # 0 12 * * * /usr/bin/certbot renew --quiet && docker compose restart nginx
    ```
 
 ### Configuration Files
@@ -94,26 +179,28 @@ docker compose -f docker/docker-compose.build.yml push
 ```yaml
 services:
   mlflow:
-    image: gcr.io/your-project/mlflow-server
+    image: ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/neuralripper:mlflow
     ports: ["5000:5000"]
     restart: unless-stopped
     volumes: [mlflow_data:/data]
 
   backend:
-    image: gcr.io/your-project/backend
+    image: ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/neuralripper:backend
     ports: ["8000:8000"]
     restart: unless-stopped
     environment: [MLFLOW_TRACKING_URI=http://mlflow:5000]
 
   frontend:
-    image: gcr.io/your-project/frontend
+    image: ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/neuralripper:frontend
     ports: ["3000:3000"]
     restart: unless-stopped
 
   nginx:
     image: nginx:alpine
-    ports: ["80:80"]
-    volumes: ["./nginx.conf:/etc/nginx/nginx.conf:ro"]
+    ports: ["80:80", "443:443"]
+    volumes: 
+      - "./nginx.conf:/etc/nginx/nginx.conf:ro"
+      - "/etc/letsencrypt:/etc/letsencrypt:ro"
     restart: unless-stopped
     depends_on: [frontend, backend, mlflow]
 
@@ -121,9 +208,35 @@ volumes:
   mlflow_data:
 ```
 
+**docker-compose.build.yml**
+```yaml
+services:
+  mlflow:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.mlflow
+      platforms: [linux/amd64]
+    image: ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/neuralripper:mlflow
+
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+      platforms: [linux/amd64]
+    image: ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/neuralripper:backend
+  
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+      platforms: [linux/amd64]
+    image: ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/neuralripper:frontend
+```
+
 **nginx.conf**
 ```nginx
 events { worker_connections 1024; }
+
 http {
     upstream frontend { server frontend:3000; }
     upstream backend { server backend:8000; }
@@ -131,24 +244,43 @@ http {
 
     server {
         listen 80;
-        server_name yourdomain.com;  # Update with your domain
+        server_name yourdomain.com www.yourdomain.com;
+        return 301 https://$server_name$request_uri;
+    }
+
+    server {
+        listen 443 ssl;
+        server_name yourdomain.com www.yourdomain.com;
         
-        location / { proxy_pass http://frontend; }
-        location /api/ { proxy_pass http://backend/; }
-        location /mlflow/ { proxy_pass http://mlflow/; }
+        ssl_certificate /etc/letsencrypt/live/yourdomain.com/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem;
         
-        # Standard proxy headers for all locations
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        location / { 
+            proxy_pass http://frontend;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+        
+        location /api/ { 
+            proxy_pass http://backend;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+        
+        location /mlflow/ { 
+            proxy_pass http://mlflow;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
     }
 }
 ```
 
 ### Cost Optimization
 
-- **VM**: e2-small (~$15/month) eliminates cold starts
-- **Storage**: 30GB standard disk (~$3/month)
-- **Network**: Minimal egress costs for portfolio traffic
-- **Total**: ~$20/month for always-on deployment
+- **Lightsail**: 2 vCPU, 4GB RAM (~$20/month)
+- **ECR**: ~$1/month for 10GB images
+- **Network**: Minimal data transfer costs
+- **Total**: ~$21/month for always-on deployment
+
+Replace `ACCOUNT_ID` with your AWS account ID (get with `aws sts get-caller-identity --query Account --output text`)

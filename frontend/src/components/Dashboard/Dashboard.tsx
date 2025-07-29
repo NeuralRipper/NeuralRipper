@@ -3,8 +3,8 @@ import RunDetailCard from "../run/RunDetailCard.tsx";
 import Sidebar from "../bars/Sidebar.tsx";
 import Titlebar from "../bars/Titlebar.tsx";
 import {useState} from "react";
-import Rerun from "../run/Rerun.tsx";
-import StreamingTerminal from "./Terminal.tsx";
+// import Rerun from "../run/Rerun.tsx";
+// import StreamingTerminal from "./Terminal.tsx";
 
 
 const Dashboard: React.FC = () => {
@@ -32,14 +32,14 @@ const Dashboard: React.FC = () => {
                         </div>
                     </main>
                 </div> 
-                : currentPage === "echo" ? <div className="flex">
-                    <Rerun />
-                </div>
-                : currentPage === "infer" ? <div className="flex items-center justify-center min-h-screen">
-                    <div className="w-full max-w-4xl">
-                        <StreamingTerminal /> 
-                    </div>
-                </div>
+                // : currentPage === "echo" ? <div className="flex">
+                //     <Rerun />
+                // </div>
+                // : currentPage === "infer" ? <div className="flex items-center justify-center min-h-screen">
+                //     <div className="w-full max-w-4xl">
+                //         <StreamingTerminal /> 
+                //     </div>
+                // </div>
                 : <div>404</div>
             }
         </div>

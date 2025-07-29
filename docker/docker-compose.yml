@@ -1,40 +1,29 @@
-# .yml used to run the containers on VM
 services:
   mlflow:
-    image: gcr.io/mldatamanage/mlflow-server
-    ports:
-      - "5000:5000"
+    image: 970547374353.dkr.ecr.us-west-2.amazonaws.com/neuralripper:mlflow
+    ports: ["5000:5000"]
     restart: unless-stopped
-    volumes:
-      - mlflow_data:/data
+    volumes: [mlflow_data:/data]
 
   backend:
-    image: gcr.io/mldatamanage/backend
-    ports:
-      - "8000:8000"
+    image: 970547374353.dkr.ecr.us-west-2.amazonaws.com/neuralripper:backend
+    ports: ["8000:8000"]
     restart: unless-stopped
-    environment:
-      - MLFLOW_TRACKING_URI=http://mlflow:5000  # Set the env var
+    environment: [MLFLOW_TRACKING_URI=http://mlflow:5000]
 
   frontend:
-    image: gcr.io/mldatamanage/frontend
-    ports:
-      - "3000:3000"
+    image: 970547374353.dkr.ecr.us-west-2.amazonaws.com/neuralripper:frontend
+    ports: ["3000:3000"]
     restart: unless-stopped
 
   nginx:
     image: nginx:alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports: ["80:80", "443:443"]
+    volumes: 
+      - "./nginx.conf:/etc/nginx/nginx.conf:ro"
       - "/etc/letsencrypt:/etc/letsencrypt:ro"
     restart: unless-stopped
-    depends_on:
-      - frontend
-      - backend
-      - mlflow
+    depends_on: [frontend, backend, mlflow]
 
 volumes:
   mlflow_data:
