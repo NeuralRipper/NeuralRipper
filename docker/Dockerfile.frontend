@@ -1,28 +1,36 @@
-FROM node:22-alpine
+FROM node:22
 
-# Install gcloud (needs bash for installer)
-RUN apk add --no-cache curl bash python3 && \
-    curl https://sdk.cloud.google.com | bash
-ENV PATH="/root/google-cloud-sdk/bin:${PATH}"
-
-RUN npm install -g pnpm
+# Install AWS CLI for x86_64
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && \
+    ./aws/install && \
+    rm -rf awscliv2.zip ./aws
 
 WORKDIR /app
 
-# Copy dependency files first (better caching)
-COPY ../frontend/package.json frontend/pnpm-lock.yaml ./
-
-# Install dependencies (cached unless package.json changes)
-RUN pnpm install --frozen-lockfile
-
-# Copy source code after dependencies
+# Copy source code (exclude node_modules)
 COPY frontend/ .
+RUN rm -rf node_modules
 
-# Build with environment variables
-RUN export VITE_GITHUB_API_KEY=$(gcloud secrets versions access latest --secret='github-api-key') && \
-    export VITE_API_BASE_URL=$(gcloud secrets versions access latest --secret='api-base-url') && \
-    pnpm run build
+# Clear cache and install
+RUN npm cache clean --force && npm install
+
+# AWS credentials for build
+ARG AWS_ACCESS_KEY_ID
+ARG AWS_SECRET_ACCESS_KEY
+ENV AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+ENV AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+ENV AWS_DEFAULT_REGION=us-west-2
+
+# Fetch secrets and build
+RUN export AWS_DEFAULT_REGION=us-west-2 && \
+    VITE_GITHUB_API_KEY=$(aws secretsmanager get-secret-value --secret-id github-api-key --query SecretString --output text) && \
+    VITE_API_BASE_URL=$(aws secretsmanager get-secret-value --secret-id api-base-url --query SecretString --output text) && \
+    export VITE_GITHUB_API_KEY && \
+    export VITE_API_BASE_URL && \
+    echo "Secrets loaded - GITHUB_KEY: ${VITE_GITHUB_API_KEY}" && \
+    echo "API_URL: ${VITE_API_BASE_URL}" && \
+    npm run build
 
 EXPOSE 3000
-
-CMD pnpm run preview --host 0.0.0.0 --port 3000
+CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "3000"]

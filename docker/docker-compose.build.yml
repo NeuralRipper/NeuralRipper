@@ -4,18 +4,21 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.mlflow
       platforms: [linux/amd64]
-    image: 970547374353.dkr.ecr.us-west-2.amazonaws.com/neuralripper:mlflow   # Pull from ECR
+    image: 970547374353.dkr.ecr.us-west-2.amazonaws.com/neuralripper:mlflow
 
   backend:
     build:
       context: ..
       dockerfile: docker/Dockerfile.backend
       platforms: [linux/amd64]
-    image: 970547374353.dkr.ecr.us-west-2.amazonaws.com/neuralripper:backend  # Pull from ECR
+    image: 970547374353.dkr.ecr.us-west-2.amazonaws.com/neuralripper:backend
   
   frontend:
     build:
       context: ..
       dockerfile: docker/Dockerfile.frontend
       platforms: [linux/amd64]
-    image: 970547374353.dkr.ecr.us-west-2.amazonaws.com/neuralripper:frontend  # Pull from ECR
+      args:
+        AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+        AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+    image: 970547374353.dkr.ecr.us-west-2.amazonaws.com/neuralripper:frontend
