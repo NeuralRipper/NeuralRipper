@@ -7,7 +7,6 @@ services:
 
   backend:
     image: 970547374353.dkr.ecr.us-west-2.amazonaws.com/neuralripper:backend
-    ports: ["8000:8000"]
     restart: unless-stopped
     environment: [MLFLOW_TRACKING_URI=http://mlflow:5000]
 
