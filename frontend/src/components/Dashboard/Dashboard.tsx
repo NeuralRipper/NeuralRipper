@@ -3,6 +3,7 @@ import RunDetailCard from "../run/RunDetailCard.tsx";
 import Sidebar from "../bars/Sidebar.tsx";
 import Titlebar from "../bars/Titlebar.tsx";
 import {useState} from "react";
+import Portfolio from "../portfolio/Portfolio.tsx";
 // import Rerun from "../run/Rerun.tsx";
 // import StreamingTerminal from "./Terminal.tsx";
 
@@ -18,7 +19,7 @@ const Dashboard: React.FC = () => {
             {/*flexible horizontally*/}
             {
                 currentPage === "about" 
-                ? <div className="flex justify-center"><Repository /></div>
+                ? <div className="flex justify-center"><Portfolio /></div>
                 : currentPage === "home" ? <div className="flex">
                     <Sidebar
                         onSelectedExpId={setSelectedExpId}
