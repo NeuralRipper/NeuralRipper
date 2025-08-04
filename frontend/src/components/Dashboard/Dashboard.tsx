@@ -19,7 +19,7 @@ const Dashboard: React.FC = () => {
             {/*flexible horizontally*/}
             {
                 currentPage === "about" 
-                ? <div className="flex justify-center"><Portfolio /></div>
+                ? <div className="flex justify-center "><Portfolio /></div>
                 : currentPage === "home" ? <div className="flex">
                     <Sidebar
                         onSelectedExpId={setSelectedExpId}
