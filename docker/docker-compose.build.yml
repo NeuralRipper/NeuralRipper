@@ -22,3 +22,10 @@ services:
         AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
         AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
     image: 970547374353.dkr.ecr.us-west-2.amazonaws.com/neuralripper:frontend
+
+  nginx:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.nginx
+      platforms: [linux/amd64]
+    image: 970547374353.dkr.ecr.us-west-2.amazonaws.com/neuralripper:nginx

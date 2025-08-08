@@ -1,16 +1,14 @@
 FROM python:3.11.13
 
-# Install python packages
-RUN pip install mlflow[extras] google-cloud-storage
+# Install mlflow and aws s3 lib
+RUN pip install mlflow>=2.8.0 boto3
+
+RUN mkdir -p /var/lib/mlflow/mlflow-db
 
 EXPOSE 5000
 
 CMD ["mlflow", "server", \
-     "--backend-store-uri", "sqlite:///data/mlflow.db", \
-     "--default-artifact-root", "gs://neuralripper-mlflow-artifacts/artifacts", \
+     "--backend-store-uri", "sqlite:////var/lib/mlflow/mlflow-db/mlflow.db", \
+     "--default-artifact-root", "s3://neuralripper/mlflow-artifacts", \
      "--host", "0.0.0.0", \
-     "--port", "5000", \
-     "--serve-artifacts"]
-
-# --serve-artifacts enables artifact proxying via the server
-# all artifact uploads and downloads are proxied through your MLflow server
+     "--port", "5000"]

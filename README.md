@@ -7,13 +7,14 @@ A comprehensive machine learning platform featuring experiment tracking, real-ti
 - **Dashboard**: Real-time experiment tracking with live metrics and charts
 - **Model Inference**: Text-based model inference with streaming terminal interface
 - **Computer Vision Demo**: YOLO detection and Rerun visualizations for images/videos
-- **MLflow Integration**: Complete experiment lifecycle management with S3 artifact storage
+- **MLflow Integration**: Complete experiment lifecycle management with S3 artifact storage and HTTP authentication
 
 ## Architecture
 
 - **Backend**: FastAPI with MLflow tracking server
 - **Frontend**: React with real-time updates and interactive components
 - **Storage**: AWS S3 for model artifacts
+- **Security**: HTTP Basic Auth for MLflow access
 - **Deployment**: Docker containers on AWS Lightsail
 
 ## Quick Start
@@ -36,6 +37,7 @@ Access at `http://localhost:3000`
 - AWS account with billing enabled
 - Docker installed locally
 - Domain name (optional)
+- S3 bucket for MLflow artifacts
 
 ### Setup AWS CLI
 
@@ -44,9 +46,21 @@ Access at `http://localhost:3000`
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
 unzip awscliv2.zip && sudo ./aws/install
 
-# Configure credentials (create IAM user with ECR permissions)
+# Configure credentials (create IAM user with ECR and S3 permissions)
 aws configure
 # Enter: Access Key ID, Secret Access Key, us-west-2, json
+```
+
+### Environment Configuration
+
+Create environment file with AWS credentials:
+```bash
+# Copy example and add real values
+cp .env.example .env
+
+# Edit .env file with your AWS credentials:
+AWS_ACCESS_KEY_ID=your_access_key
+AWS_SECRET_ACCESS_KEY=your_secret_key
 ```
 
 ### Build & Push Images
@@ -109,9 +123,14 @@ docker compose -f docker/docker-compose.build.yml push
    # ECR login
    aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com
    
-   # Create deployment
+   # Create deployment directory
    mkdir neuralripper && cd neuralripper
+   
    # Create docker-compose.yml and nginx.conf (see configs below)
+   # Set up environment variables
+   cp .env.example .env  # Add your AWS credentials
+   
+   # Deploy application
    docker compose pull
    docker compose up -d
    ```
@@ -173,7 +192,21 @@ docker compose -f docker/docker-compose.build.yml push
    # 0 12 * * * /usr/bin/certbot renew --quiet && docker compose restart nginx
    ```
 
+### MLflow Access
+
+MLflow is protected with HTTP Basic Auth:
+- **Username**: `dizzydoze`
+- **Password**: Set in `Dockerfile.nginx`
+- **Access**: `https://yourdomain.com/mlflow/`
+- **Purpose**: Secure access for experiment tracking, model management, and artifact storage
+
 ### Configuration Files
+
+**.env.example**
+```bash
+AWS_ACCESS_KEY_ID=your_access_key_here
+AWS_SECRET_ACCESS_KEY=your_secret_key_here
+```
 
 **docker-compose.yml**
 ```yaml
@@ -182,11 +215,13 @@ services:
     image: ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/neuralripper:mlflow
     ports: ["5000:5000"]
     restart: unless-stopped
-    volumes: [mlflow_data:/data]
+    volumes: [mlflow_data:/var/lib/mlflow/mlflow-db]
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
 
   backend:
     image: ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/neuralripper:backend
-    ports: ["8000:8000"]
     restart: unless-stopped
     environment: [MLFLOW_TRACKING_URI=http://mlflow:5000]
 
@@ -196,10 +231,9 @@ services:
     restart: unless-stopped
 
   nginx:
-    image: nginx:alpine
+    image: ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/neuralripper:nginx
     ports: ["80:80", "443:443"]
     volumes: 
-      - "./nginx.conf:/etc/nginx/nginx.conf:ro"
       - "/etc/letsencrypt:/etc/letsencrypt:ro"
     restart: unless-stopped
     depends_on: [frontend, backend, mlflow]
@@ -230,7 +264,17 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.frontend
       platforms: [linux/amd64]
+      args:
+        AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+        AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
     image: ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/neuralripper:frontend
+
+  nginx:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.nginx
+      platforms: [linux/amd64]
+    image: ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/neuralripper:nginx
 ```
 
 **nginx.conf**
@@ -267,8 +311,10 @@ http {
             proxy_set_header X-Real-IP $remote_addr;
         }
         
-        location /mlflow/ { 
-            proxy_pass http://mlflow;
+        location /mlflow/ {
+            auth_basic "MLflow Access";
+            auth_basic_user_file /etc/nginx/.htpasswd;
+            proxy_pass http://mlflow/;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
         }
@@ -276,11 +322,20 @@ http {
 }
 ```
 
+### Data Storage
+
+MLflow stores two types of data:
+- **Metadata** (experiments, runs, metrics): SQLite database in container volume
+- **Artifacts** (models, files): AWS S3 bucket
+
+You'll see experiments/runs immediately as metadata is stored in the database. S3 artifacts only appear when you call `mlflow.log_model()` or `mlflow.log_artifact()` in your training code.
+
 ### Cost Optimization
 
 - **Lightsail**: 2 vCPU, 4GB RAM (~$20/month)
 - **ECR**: ~$1/month for 10GB images
+- **S3**: ~$1/month for MLflow artifacts
 - **Network**: Minimal data transfer costs
-- **Total**: ~$21/month for always-on deployment
+- **Total**: ~$22/month for always-on deployment
 
 Replace `ACCOUNT_ID` with your AWS account ID (get with `aws sts get-caller-identity --query Account --output text`)
