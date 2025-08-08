@@ -10,5 +10,6 @@ EXPOSE 5000
 CMD ["mlflow", "server", \
      "--backend-store-uri", "sqlite:////var/lib/mlflow/mlflow-db/mlflow.db", \
      "--default-artifact-root", "s3://neuralripper/mlflow-artifacts", \
+     "--serve-artifacts", \
      "--host", "0.0.0.0", \
      "--port", "5000"]

@@ -200,6 +200,61 @@ MLflow is protected with HTTP Basic Auth:
 - **Access**: `https://yourdomain.com/mlflow/`
 - **Purpose**: Secure access for experiment tracking, model management, and artifact storage
 
+## Common Issues
+
+### MLflow Model Signature Warnings
+When logging PyTorch models to avoid signature inference warnings:
+
+```python
+def _log_model_checkpoint(self, epoch):
+    try:
+        # Create sample input as numpy array
+        sample_input = torch.randn(1, *self.input_size)
+        sample_input_np = sample_input.numpy()
+        
+        # Get model prediction and convert to numpy
+        with torch.no_grad():
+            sample_output = self.model(sample_input.to(self.device))
+            sample_output_np = sample_output.cpu().numpy()
+        
+        # Manually infer signature using numpy arrays
+        from mlflow.models import infer_signature
+        signature = infer_signature(sample_input_np, sample_output_np)
+        
+        # Log model with signature
+        mlflow.pytorch.log_model(
+            self.model,
+            artifact_path="model",
+            registered_model_name=f"{self.model_name}-{self.dataset_name}",
+            signature=signature,
+            pip_requirements=["torch", "torchvision", "pillow", "numpy"]
+        )
+```
+
+### S3 Artifacts Not Saving
+If MLflow artifacts aren't uploading to S3:
+
+1. **Check Environment Variables**
+   ```bash
+   # On Lightsail VM, verify AWS credentials are loaded
+   docker compose exec mlflow env | grep AWS
+   
+   # If missing, add to .env file and restart
+   docker compose down && docker compose up -d
+   ```
+
+2. **Verify IAM Permissions**
+   ```bash
+   # Your AWS IAM user needs these S3 permissions:
+   # - s3:GetObject
+   # - s3:PutObject
+   # - s3:DeleteObject
+   # - s3:ListBucket
+   
+   # Test S3 access from VM
+   aws s3 ls s3://your-mlflow-bucket/
+   ```
+
 ### Configuration Files
 
 **.env.example**
