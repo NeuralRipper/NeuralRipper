@@ -1,8 +1,9 @@
 import boto3
 from mlflow.tracking import MlflowClient
 import dotenv
-import os
 from pathlib import Path
+
+from share_secret_client import get_secret_manager
 
 
 class ModelLoader:
@@ -11,9 +12,12 @@ class ModelLoader:
         script_dir = Path(__file__).parent      
         dotenv.load_dotenv(script_dir / "../../../.env")
 
+        self._secret_client = get_secret_manager()
         self.s3_client = boto3.client('s3')
-        self.__mlflow_server_username=os.getenv('MLFLOW_SERVER_USERNAME')
-        self.__mlflow_server_password=os.getenv('MLFLOW_SERVER_PASSWORD')
+        
+        self.__secrets = self._secret_client.get_secret()
+        self.__mlflow_server_username = self.__secrets["MLFLOW_SERVER_USERNAME"]
+        self.__mlflow_server_password = self.__secrets["MLFLOW_SERVER_PASSWORD"]
         
         # https://username:password@hostname/path
         self.mlflow_client = MlflowClient(f"https://{self.__mlflow_server_username}:{self.__mlflow_server_password}@neuralripper.com/mlflow")
@@ -39,3 +43,4 @@ class ModelLoader:
             "accuracy": run.data.metrics.get("accuracy", 0),
             "path": self.get_model_s3_path(run.info.run_id)
         } for run in runs]
+    
