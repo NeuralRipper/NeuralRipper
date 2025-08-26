@@ -65,12 +65,12 @@ def get_logger(name: str, level: str = "INFO") -> logging.Logger:
     logger.addHandler(handler)
 
     # Add custom methods
-    logger.success = lambda msg, *args, **kwargs: logger.info(f"✅ {msg}", *args, **kwargs)
-    logger.epoch_start = lambda epoch, total: logger.info(f"🚀 Starting Epoch {epoch}/{total}")
-    logger.epoch_complete = lambda epoch, loss, acc: logger.info(f"✅ Epoch {epoch} completed - Loss: {loss:.4f}, Acc: {acc:.4f}")
-    logger.training_start = lambda model, epochs: logger.info(f"🏋️ Starting {model} training for {epochs} epochs")
-    logger.training_complete = lambda: logger.info("🎉 Training completed successfully!")
-    logger.model_checkpoint = lambda acc: logger.info(f"💾 New best model saved - Accuracy: {acc:.4f}")
+    logger.success = lambda msg, *args, **kwargs: logger.info(f"{msg}", *args, **kwargs)
+    logger.epoch_start = lambda epoch, total: logger.info(f"Starting Epoch {epoch}/{total}")
+    logger.epoch_complete = lambda epoch, loss, acc: logger.info(f"Epoch {epoch} completed - Loss: {loss:.4f}, Acc: {acc:.4f}")
+    logger.training_start = lambda model, epochs: logger.info(f"Starting {model} training for {epochs} epochs")
+    logger.training_complete = lambda: logger.info("Training completed successfully!")
+    logger.model_checkpoint = lambda acc: logger.info(f"New best model saved - Accuracy: {acc:.4f}")
 
     return logger
 
@@ -90,11 +90,11 @@ def get_experiment_logger(model_name: str, dataset_name: str) -> logging.Logger:
     logger = get_logger(experiment_name)
     
     # Add experiment-specific methods
-    logger.experiment_start = lambda: logger.info(f"🧪 Starting {experiment_name} experiment")
-    logger.experiment_config = lambda config: logger.info(f"⚙️ Configuration: {config}")
-    logger.data_loaded = lambda size: logger.info(f"📊 Data loaded - {size:,} samples")
-    logger.model_created = lambda params: logger.info(f"🏗️ Model created - {params:,} parameters")
-    logger.device_info = lambda device: logger.info(f"💻 Using device: {device}")
+    logger.experiment_start = lambda: logger.info(f"Starting {experiment_name} experiment")
+    logger.experiment_config = lambda config: logger.info(f"Configuration: {config}")
+    logger.data_loaded = lambda size: logger.info(f"Data loaded - {size:,} samples")
+    logger.model_created = lambda params: logger.info(f"Model created - {params:,} parameters")
+    logger.device_info = lambda device: logger.info(f"Using device: {device}")
     
     return logger
 
@@ -162,9 +162,9 @@ def log_system_info(logger: logging.Logger, device: str, total_params: int,
     logger.info("TRAINING CONFIGURATION")
     logger.info("="*60)
     logger.device_info(device)
-    logger.info(f"🔢 Parameters: {total_params:,}")
-    logger.info(f"📦 Batch size: {batch_size}")
-    logger.info(f"📈 Learning rate: {learning_rate:.2e}")
+    logger.info(f"Parameters: {total_params:,}")
+    logger.info(f"Batch size: {batch_size}")
+    logger.info(f"Learning rate: {learning_rate:.2e}")
     logger.info("="*60)
 
 
@@ -187,11 +187,11 @@ def log_mlflow_info(logger: logging.Logger, mlflow_uri: str, experiment_name: st
             domain_part = mlflow_uri.split('@')[1]
             display_uri = f"https://***:***@{domain_part}"
         
-        logger.info(f"📊 MLflow tracking: {display_uri}")
-        logger.info(f"🧪 Experiment: {experiment_name}")
-        logger.info(f"🔐 Credentials: {'✅ Loaded from AWS' if '@' in mlflow_uri else '❌ Not found'}")
+        logger.info(f"MLflow tracking: {display_uri}")
+        logger.info(f"Experiment: {experiment_name}")
+        logger.info(f"Credentials: {'Successfully Loaded from AWS' if '@' in mlflow_uri else 'Not found'}")
     else:
-        logger.warning("⚠️ MLflow tracking disabled")
+        logger.warning("MLflow tracking disabled")
 
 
 def log_training_summary(logger: logging.Logger, total_time: float, 
@@ -208,8 +208,8 @@ def log_training_summary(logger: logging.Logger, total_time: float,
     logger.info("="*60)
     logger.info("TRAINING SUMMARY")
     logger.info("="*60)
-    logger.info(f"⏱️ Total time: {total_time:.1f} minutes")
-    logger.info(f"🎯 Best accuracy: {best_accuracy:.4f}")
-    logger.info(f"📊 Epochs completed: {epochs_completed}")
+    logger.info(f"Total time: {total_time:.1f} minutes")
+    logger.info(f"Best accuracy: {best_accuracy:.4f}")
+    logger.info(f"Epochs completed: {epochs_completed}")
     logger.info("="*60)
     logger.training_complete()
