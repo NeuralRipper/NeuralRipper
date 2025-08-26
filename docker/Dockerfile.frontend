@@ -24,12 +24,12 @@ ENV AWS_DEFAULT_REGION=us-west-2
 
 # Fetch secrets and build
 RUN export AWS_DEFAULT_REGION=us-west-2 && \
-    VITE_GITHUB_API_KEY=$(aws secretsmanager get-secret-value --secret-id github-api-key --query SecretString --output text) && \
-    VITE_API_BASE_URL=$(aws secretsmanager get-secret-value --secret-id api-base-url --query SecretString --output text) && \
-    export VITE_GITHUB_API_KEY && \
-    export VITE_API_BASE_URL && \
-    echo "Secrets loaded - GITHUB_KEY: ${VITE_GITHUB_API_KEY}" && \
-    echo "API_URL: ${VITE_API_BASE_URL}" && \
+    export AWS_SECRET_JSON=$(aws secretsmanager get-secert-value --secert-id neuralripper --query) && \
+    export VITE_API_BASE_URL=$(echo "$AWS_SECRET_JSON" | jq -r '.["API_BASE_URL"]') && \
+    export VITE_GITHUB_API_KEY=$(echo "$AWS_SECRET_JSON" | jq -r '.["GITHUB_API_KEY"]') && \
+    export VITE_MLFLOW_TRACKING_USERNAME=$(echo "$AWS_SECRET_JSON" | jq -r '.["MLFLOW_TRACKING_USERNAME"]') && \
+    export VITE_MLFLOW_TRACKING_PASSWORD=$(echo "$AWS_SECRET_JSON" | jq -r '.["MLFLOW_TRACKING_PASSWORD"]') && \
+    export VITE_PRIME_API_KEY=$(echo "$AWS_SECRET_JSON" | jq -r '.["PRIME_API_KEY"]') && \
     npm run build
 
 EXPOSE 3000
