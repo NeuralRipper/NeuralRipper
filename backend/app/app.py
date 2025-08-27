@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 
 from app.routers import experiment_router, run_router
-from app.routers import infer_router
+from app.routers import infer_router, eval_router
 
 # orjson.dumps() 4x Faster serialization of JSON
 # at the global level compared to json.dumps()
@@ -28,6 +28,7 @@ app.add_middleware(
 app.include_router(experiment_router.router)
 app.include_router(run_router.router)
 app.include_router(infer_router.router)
+app.include_router(eval_router.router)
 
 
 @app.get("/")
