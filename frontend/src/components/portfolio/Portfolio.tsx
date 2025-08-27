@@ -1,12 +1,13 @@
 import Repository from "./Repository";
-import { Globe, Mail, MapPin, User, Code, GraduationCap, Briefcase } from 'lucide-react';
+import { Mail, MapPin, User, Code, GraduationCap, Briefcase, Github } from 'lucide-react';
 
 const Portfolio = () => {
     const header = {
         name: "YJ",
-        title: "Machine Learning Engineer",
+        title: "Software Engineer (AI/ML & Full Stack)",
         contact: [
             { icon: <Mail className="w-4 h-4" />, text: "overdosedizzy@gmail.com" },
+            { icon: <Github className="w-4 h-4" />, text: "https://github.com/DizzyDoze"},
             { icon: <MapPin className="w-4 h-4" />, text: "San Francisco, CA" }
         ]
     };
