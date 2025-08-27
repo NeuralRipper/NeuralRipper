@@ -12,32 +12,34 @@ const Dashboard: React.FC = () => {
     const [currentPage, setCurrentPage] = useState("home");
 
     return (
-        <div className="font-cyber min-h-screen bg-gray-950 text-gray-100">
+        <div className="font-cyber h-screen bg-gray-950 text-gray-100 flex flex-col">
             <Titlebar onPageChange={setCurrentPage} />
             {/*flexible horizontally*/}
-            {
-                currentPage === "about" 
-                ? <div className="flex justify-center "><Portfolio /></div>
-                : currentPage === "home" ? <div className="flex">
-                    <Sidebar
-                        onSelectedExpId={setSelectedExpId}
-                        onSelectedRunId={setSelectedRunId}
-                        selectedExpId={selectedExpId}
-                        selectedRunId={selectedRunId}
-                    />
-                    <main className="flex-1 bg-gray-900/30">
-                        <div className="p-6">
-                            <RunDetailCard selectedRunId={selectedRunId}/>
+            <div className="flex-1 bg-gray-950">
+                {
+                    currentPage === "about" 
+                    ? <div className="flex justify-center h-full"><Portfolio /></div>
+                    : currentPage === "home" ? <div className="flex h-full">
+                        <Sidebar
+                            onSelectedExpId={setSelectedExpId}
+                            onSelectedRunId={setSelectedRunId}
+                            selectedExpId={selectedExpId}
+                            selectedRunId={selectedRunId}
+                        />
+                        <main className="flex-1 bg-gray-900/30">
+                            <div className="p-6">
+                                <RunDetailCard selectedRunId={selectedRunId}/>
+                            </div>
+                        </main>
+                    </div> 
+                    : currentPage === "eval" ? <div className="flex justify-center h-full p-1">
+                        <div className="w-full max-w-6xl">
+                            <LLMEvalTerminal /> 
                         </div>
-                    </main>
-                </div> 
-                : currentPage === "eval" ? <div className="flex items-center justify-center min-h-screen">
-                    <div className="w-full max-w-4xl">
-                        <LLMEvalTerminal /> 
                     </div>
-                </div>
-                : <div>404</div>
-            }
+                    : <div>404</div>
+                }
+            </div>
         </div>
     );
 };

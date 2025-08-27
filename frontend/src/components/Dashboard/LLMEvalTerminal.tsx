@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 
 const LLMEvalTerminal = () => {
@@ -14,7 +15,7 @@ const LLMEvalTerminal = () => {
         // Initialize terminal
         const terminal = new Terminal({
             cursorBlink: true,
-            fontSize: 15,
+            fontSize: 16,
             theme: {
                 background: '#0a0e1a',
                 foreground: '#a855f7',
@@ -22,11 +23,31 @@ const LLMEvalTerminal = () => {
             }
         });
 
+        // Create fit addon for responsive sizing
+        const fitAddon = new FitAddon();
+        terminal.loadAddon(fitAddon);
+
+        let resizeObserver: ResizeObserver | null = null;
+        let handleResize: (() => void) | null = null;
+
         if (terminalRef.current) {
             terminal.open(terminalRef.current);
             terminalInstance.current = terminal;
             terminal.write("Welcome to [Neural Ripper] LLM Eval Lab!\r\n");
             terminal.write("Connecting to evaluation backend...\r\n");
+            
+            // Fit terminal to container
+            fitAddon.fit();
+            
+            // Auto-resize when container size changes
+            resizeObserver = new ResizeObserver(() => {
+                fitAddon.fit();
+            });
+            resizeObserver.observe(terminalRef.current);
+            
+            // Also fit on window resize
+            handleResize = () => fitAddon.fit();
+            window.addEventListener('resize', handleResize);
         }
 
         // Handle input
@@ -53,6 +74,12 @@ const LLMEvalTerminal = () => {
             terminal.dispose();
             if (wsRef.current) {
                 wsRef.current.close();
+            }
+            if (handleResize) {
+                window.removeEventListener('resize', handleResize);
+            }
+            if (resizeObserver) {
+                resizeObserver.disconnect();
             }
         };
     }, []);
@@ -124,7 +151,7 @@ const LLMEvalTerminal = () => {
         const prompt = inputBufferRef.current;
         inputBufferRef.current = '';
 
-        terminal.write(`\r\n${cyan}🤖 `);
+        terminal.write(`\r\n${cyan}`);
 
         // Send prompt via WebSocket
         wsRef.current.send(JSON.stringify({
@@ -138,11 +165,11 @@ const LLMEvalTerminal = () => {
     const red = '\x1b[38;2;239;68;68m';
 
     return (
-        <div className="bg-slate-900 p-3 rounded-lg">
-            <div ref={terminalRef} className="min-h-[400px]"></div>
-            <div className="mt-2 flex justify-between text-xs text-gray-400">
-                <span>Status: {wsConnected ? '🟢 Connected' : '🔴 Disconnected'}</span>
-                <span>Backend: Prime Intellect</span>
+        <div className="bg-slate-900 p-4 rounded-lg w-full h-full flex flex-col max-w-full overflow-hidden">
+            <div ref={terminalRef} className="flex-1 w-full min-h-0 overflow-hidden"></div>
+            <div className="mt-3 flex justify-between text-sm text-gray-400 flex-shrink-0">
+                <span>[Status]: {wsConnected ? 'Connected' : 'Disconnected'}</span>
+                <span>[Backend]: Prime Intellect</span>
             </div>
         </div>
     );
