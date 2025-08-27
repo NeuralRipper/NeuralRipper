@@ -19,15 +19,14 @@ class LLMEvalHandler:
     async def stream_chat_response(self, websocket: WebSocket, prompt: str):
         """Stream response from Prime Intellect pod"""
         try:
-            # Ensure we have a pod
-            if not self.current_pod_id:
-                await self.send_status(websocket, "Creating pod...")
-                self.current_pod_id = await self.pi_client.create_pod()
-                await self.send_status(websocket, "Pod ready, generating response...")
-            
-            # Stream response from pod
-            async for chunk in self.pi_client.stream_chat(self.current_pod_id, prompt):
-                await self.send_chunk(websocket, chunk)
+            # For now, use the complete workflow that manages pod lifecycle
+            async for chunk in self.pi_client.chat_complete(prompt):
+                if chunk.startswith('[') and chunk.endswith(']'):
+                    # Status message
+                    await self.send_status(websocket, chunk[1:-1])
+                else:
+                    # Response chunk
+                    await self.send_chunk(websocket, chunk)
             
             # Send completion
             await websocket.send_text(json.dumps({

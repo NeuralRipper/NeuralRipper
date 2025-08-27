@@ -165,7 +165,7 @@ const LLMEvalTerminal = () => {
     const red = '\x1b[38;2;239;68;68m';
 
     return (
-        <div className="bg-slate-900 p-4 rounded-lg w-full h-full flex flex-col max-w-full overflow-hidden">
+        <div className="bg-slate-900 p-4 rounded-lg h-full flex flex-col max-w-full overflow-hidden">
             <div ref={terminalRef} className="flex-1 w-full min-h-0 overflow-hidden"></div>
             <div className="mt-3 flex justify-between text-sm text-gray-400 flex-shrink-0">
                 <span>[Status]: {wsConnected ? 'Connected' : 'Disconnected'}</span>

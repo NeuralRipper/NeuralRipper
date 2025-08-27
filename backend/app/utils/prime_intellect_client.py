@@ -32,39 +32,50 @@ class PrimeIntellectClient:
                 return secrets["PRIME_API_KEY"]
         except Exception as e:
             print(f"AWS Secrets Manager failed: {e}")
-        
-        # Fallback to environment variable
-        api_key = os.environ.get('PRIME_API_KEY')
-        if api_key:
-            return api_key
-            
-        # Demo mode
-        print("WARNING: No PRIME_API_KEY found - using demo mode")
-        return "demo"
-        
+
+    async def get_gpu_availability(self):
+        """Get available GPU types and configurations"""
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"{self.base_url}/availability",
+                headers=self.headers
+            ) as response:
+                return await response.json()
 
     async def create_pod(self, 
                         model_name: str = "meta-llama/Llama-3.1-8B-Instruct",
-                        gpu_type: str = "RTX4090",
-                        gpu_count: int = 1,
                         max_price: float = 2.0):
-        """Create a new pod for inference with configurable parameters"""
-        if self.api_key == "demo":
-            # Demo mode - simulate pod creation
-            await asyncio.sleep(1)
-            return "demo-pod-123"
+        """Create a new pod for inference with dynamic configuration based on availability"""  
+        # Get available GPUs and pick the best option
+        availability = await self.get_gpu_availability()
+        
+        # Find suitable GPU option under max price
+        suitable_gpu = None
+        for gpu in availability.get('data', []):
+            if gpu.get('priceHr', 999) <= max_price:
+                suitable_gpu = gpu
+                break
+        
+        if not suitable_gpu:
+            raise Exception(f"No suitable GPU found under ${max_price}/hr")
+        
+        # Select appropriate image for LLM
+        available_images = suitable_gpu.get('availableImages', [])
+        image = "vllm_llama_8b" if "vllm_llama_8b" in available_images else available_images[0]
         
         async with aiohttp.ClientSession() as session:
             payload = {
                 "pod": {
                     "name": f"eval-pod-{int(asyncio.get_event_loop().time())}",
-                    "image": "primeintellect/vllm:latest",
-                    "gpuType": gpu_type,
-                    "gpuCount": gpu_count,
+                    "cloudId": suitable_gpu['cloudId'],
+                    "gpuType": suitable_gpu['gpuType'],
+                    "socket": suitable_gpu.get('socket', 'PCIe'),
+                    "gpuCount": 1,
                     "diskSize": 50,
                     "vcpus": 4,
                     "memory": 32,
                     "maxPrice": max_price,
+                    "image": image,
                     "envVars": [
                         {
                             "key": "MODEL_NAME",
@@ -72,13 +83,13 @@ class PrimeIntellectClient:
                         },
                         {
                             "key": "TENSOR_PARALLEL_SIZE",
-                            "value": str(gpu_count)
+                            "value": "1"
                         }
                     ],
                     "autoRestart": True
                 },
                 "provider": {
-                    "type": "runpod"
+                    "type": suitable_gpu.get('provider', 'runpod')
                 }
             }
             
@@ -99,10 +110,6 @@ class PrimeIntellectClient:
 
     async def wait_for_pod_ready(self, pod_id: str, timeout: int = 300):
         """Wait for pod to be ready"""
-        if self.api_key == "demo":
-            await asyncio.sleep(2)
-            return True
-            
         for _ in range(timeout // 10):
             status = await self.get_pod_status(pod_id)
             if status.get('status') == 'RUNNING':
@@ -116,33 +123,20 @@ class PrimeIntellectClient:
         
         raise Exception(f"Pod {pod_id} didn't become ready within {timeout} seconds")
 
-    async def get_pods(self):
-        """Get all pods"""
-        if self.api_key == "demo":
-            return [{"id": "demo-pod-123", "status": "RUNNING"}]
-            
-        async with aiohttp.ClientSession() as session:
-            async with session.get(f"{self.base_url}/pods", headers=self.headers) as response:
-                return await response.json()
-
     async def get_pods_history(self):
         """Get pods history"""
-        if self.api_key == "demo":
-            return {"data": []}
-            
         async with aiohttp.ClientSession() as session:
             async with session.get(f"{self.base_url}/pods/history", headers=self.headers) as response:
                 return await response.json()
         
     async def get_pods_status(self):
-        """Get status of all pods"""
-        return await self.get_pods()
+        """Get status of all pods"""       
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{self.base_url}/pods", headers=self.headers) as response:
+                return await response.json()
 
     async def get_pod_status(self, pod_id: str) -> dict:
         """Get single pod status"""
-        if self.api_key == "demo":
-            return {"status": "RUNNING", "endpoint": "http://demo.local:8000"}
-            
         async with aiohttp.ClientSession() as session:
             async with session.get(
                 f"{self.base_url}/pods/{pod_id}",
@@ -152,15 +146,6 @@ class PrimeIntellectClient:
 
     async def stream_chat(self, pod_id: str, prompt: str) -> AsyncGenerator[str, None]:
         """Stream chat response from the pod"""
-        if self.api_key == "demo":
-            # Demo response
-            demo_response = f"🤖 Demo response to: '{prompt}'\n\nThis is a simulated streaming response from Prime Intellect. In production, this would connect to your actual pod and stream real LLM responses.\n\nThe pod lifecycle management is working correctly!"
-            
-            for chunk in demo_response.split():
-                yield chunk + " "
-                await asyncio.sleep(0.1)
-            return
-        
         # Real implementation would connect to pod endpoint
         status = await self.get_pod_status(pod_id)
         endpoint = status.get('endpoint', '')
@@ -195,11 +180,7 @@ class PrimeIntellectClient:
                                 continue
 
     async def delete_pod(self, pod_id: str):
-        """Delete pod to stop billing"""
-        if self.api_key == "demo":
-            print(f"Demo: Pod {pod_id} deleted")
-            return
-            
+        """Delete pod to stop billing"""    
         async with aiohttp.ClientSession() as session:
             async with session.delete(
                 f"{self.base_url}/pods/{pod_id}",
@@ -210,9 +191,21 @@ class PrimeIntellectClient:
                 else:
                     error_text = await response.text()
                     print(f"Failed to delete pod: {response.status} - {error_text}")
-    
-    
 
-
-
-    
+    async def chat_complete(self, prompt: str) -> AsyncGenerator[str, None]:
+        """Complete workflow: create pod, chat, delete pod"""
+        pod_id = None
+        try:
+            yield "[Creating pod...]"
+            pod_id = await self.create_pod()
+            
+            yield "[Pod ready, generating response...]"
+            async for chunk in self.stream_chat(pod_id, prompt):
+                yield chunk
+                
+        except Exception as e:
+            yield f"[Error: {str(e)}]"
+        finally:
+            if pod_id:
+                yield "[Cleaning up pod...]"
+                await self.delete_pod(pod_id)
