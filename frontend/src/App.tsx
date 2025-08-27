@@ -1,5 +1,5 @@
 import Dashboard from "./components/dashboard/Dashboard";
-import {Routes, Route} from "react-router";
+import {Routes, Route} from "react-router-dom";
 
 const App: React.FC = () => {
     return (
