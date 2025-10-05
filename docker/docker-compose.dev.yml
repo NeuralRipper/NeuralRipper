@@ -1,0 +1,40 @@
+services:
+  mlflow:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.mlflow
+    ports: ["5000:5000"]
+    restart: unless-stopped
+    volumes: [mlflow_data:/var/lib/mlflow/mlflow-db]
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_DEFAULT_REGION=us-west-2
+
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    restart: unless-stopped
+    environment: [MLFLOW_TRACKING_URI=http://mlflow:5000]
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+      args:
+        AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+        AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+    ports: ["3000:3000"]
+    restart: unless-stopped
+
+  nginx:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.nginx
+    ports: ["80:80", "443:443"]
+    restart: unless-stopped
+    depends_on: [frontend, backend, mlflow]
+
+volumes:
+  mlflow_data:
