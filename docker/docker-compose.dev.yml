@@ -17,7 +17,7 @@ services:
       dockerfile: docker/Dockerfile.backend
     ports: ["8000:8000"]
     restart: unless-stopped
-    environment: [MLFLOW_TRACKING_URI=http://mlflow:5000]
+    environment: [MLFLOW_TRACKING_URI=https://neuralripper.com/mlflow]  # Use production mlflow for both local dev and actual training
 
   frontend:
     build:
@@ -26,6 +26,7 @@ services:
       args:
         AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
         AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+        VITE_API_BASE_URL: https://neuralripper.com/api
     ports: ["3000:3000"]
     restart: unless-stopped
 

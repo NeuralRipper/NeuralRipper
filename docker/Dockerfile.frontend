@@ -1,7 +1,8 @@
 FROM node:22
 
-# Install AWS CLI for x86_64
-RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+# Install AWS CLI for x86_64 and jq
+RUN apt-get update && apt-get install -y jq && \
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
     unzip awscliv2.zip && \
     ./aws/install && \
     rm -rf awscliv2.zip ./aws
@@ -15,21 +16,22 @@ RUN rm -rf node_modules
 # Clear cache and install
 RUN npm cache clean --force && npm install
 
-# AWS credentials for build
+# AWS credentials and optional override for API base URL
 ARG AWS_ACCESS_KEY_ID
 ARG AWS_SECRET_ACCESS_KEY
+ARG VITE_API_BASE_URL
 ENV AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
 ENV AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
 ENV AWS_DEFAULT_REGION=us-west-2
 
-# Fetch secrets and build
-RUN export AWS_DEFAULT_REGION=us-west-2 && \
-    export AWS_SECRET_JSON=$(aws secretsmanager get-secert-value --secert-id neuralripper --query) && \
-    export VITE_API_BASE_URL=$(echo "$AWS_SECRET_JSON" | jq -r '.["API_BASE_URL"]') && \
-    export VITE_GITHUB_API_KEY=$(echo "$AWS_SECRET_JSON" | jq -r '.["GITHUB_API_KEY"]') && \
-    export VITE_MLFLOW_TRACKING_USERNAME=$(echo "$AWS_SECRET_JSON" | jq -r '.["MLFLOW_TRACKING_USERNAME"]') && \
-    export VITE_MLFLOW_TRACKING_PASSWORD=$(echo "$AWS_SECRET_JSON" | jq -r '.["MLFLOW_TRACKING_PASSWORD"]') && \
-    export VITE_PRIME_API_KEY=$(echo "$AWS_SECRET_JSON" | jq -r '.["PRIME_API_KEY"]') && \
+# Fetch secrets from AWS and build
+RUN export AWS_SECRET_JSON=$(aws secretsmanager get-secret-value --secret-id neuralripper --query SecretString --output text) && \
+    export VITE_API_BASE_URL=${VITE_API_BASE_URL:-$(echo "$AWS_SECRET_JSON" | jq -r '.API_BASE_URL')} && \
+    export VITE_GITHUB_API_KEY=$(echo "$AWS_SECRET_JSON" | jq -r '.GITHUB_API_KEY') && \
+    export VITE_MLFLOW_TRACKING_USERNAME=$(echo "$AWS_SECRET_JSON" | jq -r '.MLFLOW_TRACKING_USERNAME') && \
+    export VITE_MLFLOW_TRACKING_PASSWORD=$(echo "$AWS_SECRET_JSON" | jq -r '.MLFLOW_TRACKING_PASSWORD') && \
+    export VITE_PRIME_API_KEY=$(echo "$AWS_SECRET_JSON" | jq -r '.PRIME_API_KEY') && \
+    echo "Building with VITE_API_BASE_URL=$VITE_API_BASE_URL" && \
     npm run build
 
 EXPOSE 3000
