@@ -33,8 +33,9 @@ class PodHandler:
         self.api_key = api_key
 
         # Map model name to the endpoint urls, TODO: dynamic loading if there's more
+        # Use actual vLLM model names that match what's loaded on RunPod (case-sensitive)
         model_configs = {
-              "qwen-0.5b": os.getenv("RUNPOD_ENDPOINT_QWEN"),
+              "qwen/qwen2.5-0.5b-instruct": os.getenv("RUNPOD_ENDPOINT_QWEN"),
           }
         
         # Build OpenAI compatible URLs for models

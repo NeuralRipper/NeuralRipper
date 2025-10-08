@@ -17,7 +17,8 @@ async def evaluation(websocket: WebSocket):
     await websocket.accept()
 
     try:
-        async for message in websocket.iter_text(): 
+        async for message in websocket.iter_text():
+            print(f"Received message: {message}")
             # load data into json
             data = json.loads(message)
             # retrieve data from the ws message
@@ -28,13 +29,19 @@ async def evaluation(websocket: WebSocket):
                 await websocket.send_json({"error": "No prompt provided"})
                 continue
 
+            print(f"Starting inference for model={model}, prompt={prompt}")
             # stream tokens back to client
             async for token in websocket.app.state.queue_handler.stream_inference(model, prompt):
+                print(f"Sending token: {token}")
                 await websocket.send_json({"token": token})
 
             # send completion signal
+            print("Sending done signal")
             await websocket.send_json({"done": True})
     except WebSocketDisconnect:
         print("Client disconnected")
     except Exception as e:
+        print(f"WebSocket error: {e}")
+        import traceback
+        traceback.print_exc()
         await websocket.send_json({"error": str(e)})

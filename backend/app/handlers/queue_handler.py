@@ -197,7 +197,11 @@ class QueueHandler:
 
         except Exception as e:
             # If any error, send error msg to all clients no matter who causes it
+            print(f"Error in _stream_single_request: {e}")
+            import traceback
+            traceback.print_exc()
             await response_channel.put(f"Error: {str(e)}")
         finally:
             # Signal complete to all clients(None -> End of stream)
+            print(f"Stream complete for prompt: {prompt[:50]}...")
             await response_channel.put(None)
