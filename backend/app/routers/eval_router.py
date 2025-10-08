@@ -2,12 +2,17 @@ import json
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 
+router = APIRouter(tags=["evaluation"])
 
-router = APIRouter(tags=["evaluation"], 
-                   description="Handling streaming of the tokens via websocket, accepting client prompt&model, streaming back at token level.")
 
 @router.websocket("/ws/eval")
 async def evaluation(websocket: WebSocket):
+    """
+        WebSocket endpoint for streaming LLM inference.
+        
+        Accepts: {"model": "qwen-0.5b", "prompt": "your prompt"}
+        Streams: {"token": "..."}, {"done": true}
+    """
     # wait and accept websocket connection from frontend
     await websocket.accept()
 

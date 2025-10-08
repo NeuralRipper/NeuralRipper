@@ -6,7 +6,7 @@ import json
 
 import httpx
 
-from backend.app.handlers.pod_handler import PodHandler
+from app.handlers.pod_handler import PodHandler
 
 
 class QueueHandler:
@@ -168,7 +168,8 @@ class QueueHandler:
         
         try:
             # httpx and aiohttp both works as async http client, but httpx is preferrable with morden design and better maintained
-            async with httpx.AsyncClient(timeout=60.0) as client:
+            # Use higher timeout for streaming LLM responses (can take several minutes)
+            async with httpx.AsyncClient(timeout=300.0) as client:
                 # Stream response from RunPod
                 async with client.stream(
                     "POST",

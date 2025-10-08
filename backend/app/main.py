@@ -4,8 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 
 from app.routers import experiment_router, run_router, eval_router
-from backend.app.handlers.pod_handler import PodHandler
-from backend.app.handlers.queue_handler import QueueHandler
+from app.handlers.pod_handler import PodHandler
+from app.handlers.queue_handler import QueueHandler
 from contextlib import asynccontextmanager
 
 
