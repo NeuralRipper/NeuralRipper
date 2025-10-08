@@ -34,7 +34,7 @@ class PodHandler:
 
         # Map model name to the endpoint urls, TODO: dynamic loading if there's more
         model_configs = {
-              "gpt2": os.getenv("RUNPOD_ENDPOINT_GPT2"),
+              "qwen-0.5b": os.getenv("RUNPOD_ENDPOINT_QWEN"),
           }
         
         # Build OpenAI compatible URLs for models
