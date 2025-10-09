@@ -3,7 +3,7 @@ import Sidebar from "../bars/Sidebar.tsx";
 import Titlebar from "../bars/Titlebar.tsx";
 import {useState} from "react";
 import Portfolio from "../portfolio/Portfolio.tsx";
-import LLMEvalTerminal from "./LLMEvalTerminal.tsx";
+import EvalTerminal from "./EvalTerminal.tsx";
 
 
 const Dashboard: React.FC = () => {
@@ -32,10 +32,8 @@ const Dashboard: React.FC = () => {
                             </div>
                         </main>
                     </div> 
-                    : currentPage === "eval" ? <div className="flex justify-center h-full p-1">
-                        <div className="w-full max-w-6xl">
-                            <LLMEvalTerminal /> 
-                        </div>
+                    : currentPage === "eval" ? <div className="w-full flex justify-center h-full p-1">
+                        <EvalTerminal />
                     </div>
                     : <div>404</div>
                 }

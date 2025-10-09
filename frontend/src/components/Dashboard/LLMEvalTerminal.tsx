@@ -1,3 +1,11 @@
+
+// TODO: Move websocket related funcs to new EvalTerminal, then remove this file
+
+
+
+
+
+
 import { useRef, useEffect, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
