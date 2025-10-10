@@ -1,33 +1,31 @@
 services:
   mlflow:
-    image: 970547374353.dkr.ecr.us-west-2.amazonaws.com/neuralripper:mlflow
+    image: 970547374353.dkr.ecr.us-east-1.amazonaws.com/neuralripper:mlflow
     ports: ["5000:5000"]
     restart: unless-stopped
     volumes: [mlflow_data:/var/lib/mlflow/mlflow-db]
     environment:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_DEFAULT_REGION=us-west-2
+      - AWS_DEFAULT_REGION=us-east-1
 
   backend:
-    image: 970547374353.dkr.ecr.us-west-2.amazonaws.com/neuralripper:backend
+    image: 970547374353.dkr.ecr.us-east-1.amazonaws.com/neuralripper:backend
     restart: unless-stopped
     environment:
       - MLFLOW_TRACKING_URI=http://mlflow:5000
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_DEFAULT_REGION=us-west-2
+      - AWS_DEFAULT_REGION=us-east-1
 
   frontend:
-    image: 970547374353.dkr.ecr.us-west-2.amazonaws.com/neuralripper:frontend
+    image: 970547374353.dkr.ecr.us-east-1.amazonaws.com/neuralripper:frontend
     ports: ["3000:3000"]
     restart: unless-stopped
 
   nginx:
-    image: 970547374353.dkr.ecr.us-west-2.amazonaws.com/neuralripper:nginx
-    ports: ["80:80", "443:443"]
-    volumes: 
-      - "/etc/letsencrypt:/etc/letsencrypt:ro"
+    image: 970547374353.dkr.ecr.us-east-1.amazonaws.com/neuralripper:nginx
+    ports: ["80:80"]
     restart: unless-stopped
     depends_on: [frontend, backend, mlflow]
 

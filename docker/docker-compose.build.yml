@@ -5,7 +5,7 @@ services:
       dockerfile: docker/Dockerfile.mlflow
       platforms: [linux/amd64]
     # ECR: name of the image: registry/repo_name:tag
-    image: 970547374353.dkr.ecr.us-west-2.amazonaws.com/neuralripper:mlflow
+    image: 970547374353.dkr.ecr.us-east-1.amazonaws.com/neuralripper:mlflow
 
   backend:
     build:
@@ -13,7 +13,7 @@ services:
       dockerfile: docker/Dockerfile.backend
       platforms: [linux/amd64]
     # ECR: name of the image: registry/repo_name:tag
-    image: 970547374353.dkr.ecr.us-west-2.amazonaws.com/neuralripper:backend
+    image: 970547374353.dkr.ecr.us-east-1.amazonaws.com/neuralripper:backend
   
   frontend:
     build:
@@ -24,7 +24,7 @@ services:
         AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
         AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
     # ECR: name of the image: registry/repo_name:tag
-    image: 970547374353.dkr.ecr.us-west-2.amazonaws.com/neuralripper:frontend
+    image: 970547374353.dkr.ecr.us-east-1.amazonaws.com/neuralripper:frontend
 
   nginx:
     build:
@@ -32,4 +32,4 @@ services:
       dockerfile: docker/Dockerfile.nginx
       platforms: [linux/amd64]
     # ECR: name of the image: registry/repo_name:tag
-    image: 970547374353.dkr.ecr.us-west-2.amazonaws.com/neuralripper:nginx
+    image: 970547374353.dkr.ecr.us-east-1.amazonaws.com/neuralripper:nginx

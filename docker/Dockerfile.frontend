@@ -22,7 +22,7 @@ ARG AWS_SECRET_ACCESS_KEY
 ARG VITE_API_BASE_URL
 ENV AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
 ENV AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-ENV AWS_DEFAULT_REGION=us-west-2
+ENV AWS_DEFAULT_REGION=us-east-1
 
 # Fetch secrets from AWS and build
 RUN export AWS_SECRET_JSON=$(aws secretsmanager get-secret-value --secret-id neuralripper --query SecretString --output text) && \

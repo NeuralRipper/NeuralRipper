@@ -10,7 +10,7 @@ services:
     environment:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_DEFAULT_REGION=us-west-2
+      - AWS_DEFAULT_REGION=us-east-1
     # LOCAL: just name whatever, tradition is username/repo:tag for dockerhub
     image: neuralripper/mlflow:dev
 
@@ -25,7 +25,7 @@ services:
       - MLFLOW_TRACKING_URI=https://neuralripper.com/mlflow  # Use production mlflow for both local dev and actual training
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_DEFAULT_REGION=us-west-2
+      - AWS_DEFAULT_REGION=us-east-1
     # LOCAL: just name whatever, tradition is username/repo:tag for dockerhub
     image: neuralripper/backend:dev 
 
