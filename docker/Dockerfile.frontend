@@ -28,8 +28,8 @@ ENV AWS_DEFAULT_REGION=us-east-1
 RUN export AWS_SECRET_JSON=$(aws secretsmanager get-secret-value --secret-id neuralripper --query SecretString --output text) && \
     export VITE_API_BASE_URL=${VITE_API_BASE_URL:-$(echo "$AWS_SECRET_JSON" | jq -r '.API_BASE_URL')} && \
     export VITE_GITHUB_API_KEY=$(echo "$AWS_SECRET_JSON" | jq -r '.GITHUB_API_KEY') && \
-    export VITE_MLFLOW_TRACKING_USERNAME=$(echo "$AWS_SECRET_JSON" | jq -r '.MLFLOW_TRACKING_USERNAME') && \
-    export VITE_MLFLOW_TRACKING_PASSWORD=$(echo "$AWS_SECRET_JSON" | jq -r '.MLFLOW_TRACKING_PASSWORD') && \
+    export VITE_MLFLOW_TRACKING_USERNAME=$(echo "$AWS_SECRET_JSON" | jq -r '.MLFLOW_SERVER_USERNAME') && \
+    export VITE_MLFLOW_TRACKING_PASSWORD=$(echo "$AWS_SECRET_JSON" | jq -r '.MLFLOW_SERVER_PASSWORD') && \
     export VITE_PRIME_API_KEY=$(echo "$AWS_SECRET_JSON" | jq -r '.PRIME_API_KEY') && \
     echo "Building with VITE_API_BASE_URL=$VITE_API_BASE_URL" && \
     npm run build

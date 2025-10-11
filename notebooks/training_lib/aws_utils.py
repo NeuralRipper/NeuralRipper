@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class AWSSecretManager:
     """Simple AWS Secrets Manager client with caching."""
     
-    def __init__(self, region_name: str = 'us-west-2'):
+    def __init__(self, region_name: str = 'us-east-1'):
         self.region_name = region_name
         self._client = None
         self._secrets_cache = {}
