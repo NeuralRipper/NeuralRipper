@@ -12,9 +12,9 @@ for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker c
     sudo apt-get remove -y $pkg 2>/dev/null || true
 done
 
-echo "=== Installing Docker ==="
+echo "=== Installing Docker and Certbot ==="
 sudo apt-get update
-sudo apt-get install -y ca-certificates curl
+sudo apt-get install -y ca-certificates curl certbot
 sudo install -m 0755 -d /etc/apt/keyrings
 sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 sudo chmod a+r /etc/apt/keyrings/docker.asc
@@ -50,6 +50,26 @@ cd ~/NeuralRipper/docker
 sg docker -c "docker compose -f docker-compose.yml pull"
 sg docker -c "docker compose -f docker-compose.yml up -d"
 
+echo "=== Setting up SSL certificates ==="
+# Stop nginx to free port 80 for certbot
+cd ~/NeuralRipper/docker
+sg docker -c "docker compose stop nginx"
+
+# Get SSL certificate (change email and domain as needed)
+sudo certbot certonly --standalone \
+  -d neuralripper.com \
+  -d www.neuralripper.com \
+  --agree-tos \
+  --email overdosedizzy@gmail.com \
+  --non-interactive
+
+# Restart all containers with SSL
+sg docker -c "docker compose up -d"
+
+# Setup auto-renewal cron job
+(sudo crontab -l 2>/dev/null; echo "0 0,12 * * * certbot renew --quiet --deploy-hook 'cd /home/ubuntu/NeuralRipper/docker && docker compose restart nginx'") | sudo crontab -
+
 echo "=== Done! ==="
-echo "You may need to log out and log back in for docker group to take full effect."
 echo "Check status: docker ps"
+echo "Test HTTP: curl http://localhost"
+echo "Test HTTPS: curl https://neuralripper.com"
