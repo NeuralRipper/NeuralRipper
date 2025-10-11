@@ -25,9 +25,11 @@ services:
 
   nginx:
     image: 970547374353.dkr.ecr.us-east-1.amazonaws.com/neuralripper:nginx
-    ports: ["80:80"]
+    ports: ["80:80", "443:443"]
     restart: unless-stopped
     depends_on: [frontend, backend, mlflow]
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
 
 volumes:
   mlflow_data:
