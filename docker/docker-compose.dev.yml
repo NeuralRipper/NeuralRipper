@@ -1,18 +1,7 @@
 services:
-  mlflow:
-    container_name: neuralripper-mlflow
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.mlflow
-    ports: ["5000:5000"]
-    restart: unless-stopped
-    volumes: [mlflow_data:/var/lib/mlflow/mlflow-db]
-    environment:
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_DEFAULT_REGION=us-east-1
-    # LOCAL: just name whatever, tradition is username/repo:tag for dockerhub
-    image: neuralripper/mlflow:dev
+  # mlflow:
+  #   Local MLflow disabled - all environments share production instance at neuralripper.com/mlflow
+  #   This ensures unified experiment tracking and artifact storage across local dev and production
 
   backend:
     container_name: neuralripper-backend
@@ -48,11 +37,11 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.nginx
+      args:
+        AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+        AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
     ports: ["80:80", "443:443"]
     restart: unless-stopped
-    depends_on: [frontend, backend, mlflow]
+    depends_on: [frontend, backend]
     # LOCAL: just name whatever, tradition is username/repo:tag for dockerhub
     image: neuralripper/nginx:dev
-
-volumes:
-  mlflow_data:
