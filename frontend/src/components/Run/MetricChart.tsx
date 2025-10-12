@@ -25,6 +25,14 @@ const MetricChart: React.FC<MetricChartProps> = ({runId, metricName, finalValue}
         };
 
         fetchMetric();
+
+        // Fetch new epoch data every 10 seconds
+        const intervalId = setInterval(() => {
+            console.log("Epoch data updated.");
+            fetchMetric();
+        }, 10000)
+
+        return () => clearInterval(intervalId);
     }, [runId, metricName]);
 
     // Prepare chart data

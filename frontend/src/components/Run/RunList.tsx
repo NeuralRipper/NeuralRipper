@@ -33,7 +33,7 @@ const RunList: React.FC<RunListProps> = ({experimentId, onSelectedRunId, selecte
         // IMPORTANT: setInterval only called inside useEffect to avoid multiple intervals
         const intervalId = setInterval(() => {
             try {
-                console.log("Fetching run list...")
+                console.log("[INTERVAL]Run list updated.")
                 getRuns();
             } catch(e) {
                 console.error("Failed to fetch run data.")

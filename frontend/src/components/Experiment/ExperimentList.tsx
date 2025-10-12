@@ -35,7 +35,7 @@ const ExperimentList: React.FC<ExperimentListProps> = ({onSelectedExpId, selecte
         // IMPORTANT: only call setInterval inside useEffect with NO dependencies, so it won't create multiple intervals
         const intervalId = setInterval(() => {
             try {
-                console.log("Fetching experiment list...")
+                console.log("[INTERVAL]Experiment list updated.")
                 getExperimentList();        
             } catch(e) {
                 console.log("Failed to fetch experiment list.")
