@@ -2,7 +2,7 @@ import json
 import boto3
 
 class SecretManager:
-    def __init__(self, secret_name="neuralripper", region_name="us-west-2"):
+    def __init__(self, secret_name="neuralripper", region_name="us-east-1"):
         self.secret_name = secret_name
         self.region_name = region_name
         self.client = boto3.client('secretsmanager', region_name=region_name)
