@@ -31,5 +31,9 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.nginx
       platforms: [linux/amd64]
+      args:
+        AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+        AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+        AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN}
     # ECR: name of the image: registry/repo_name:tag
     image: 970547374353.dkr.ecr.us-east-1.amazonaws.com/neuralripper:nginx

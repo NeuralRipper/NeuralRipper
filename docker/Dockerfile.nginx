@@ -3,17 +3,20 @@ FROM nginx:alpine
 # Install AWS CLI and jq for secrets management
 RUN apk add --no-cache apache2-utils aws-cli jq
 
-# AWS credentials to fetch secrets
+# AWS credentials to fetch secrets (supports both IAM users and IAM roles)
 ARG AWS_ACCESS_KEY_ID
 ARG AWS_SECRET_ACCESS_KEY
+ARG AWS_SESSION_TOKEN
 ENV AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
 ENV AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+ENV AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN
 ENV AWS_DEFAULT_REGION=us-east-1
 
 # Fetch MLflow credentials from AWS Secrets Manager and setup htpasswd
 RUN export AWS_SECRET_JSON=$(aws secretsmanager get-secret-value --secret-id neuralripper --region us-east-1 --query SecretString --output text) && \
     export MLFLOW_USERNAME=$(echo "$AWS_SECRET_JSON" | jq -r '.MLFLOW_SERVER_USERNAME') && \
     export MLFLOW_PASSWORD=$(echo "$AWS_SECRET_JSON" | jq -r '.MLFLOW_SERVER_PASSWORD') && \
+    echo "Building with MLflow username: $MLFLOW_USERNAME" && \
     htpasswd -cb /etc/nginx/.htpasswd "$MLFLOW_USERNAME" "$MLFLOW_PASSWORD"
 
 COPY nginx.conf /etc/nginx/nginx.conf
