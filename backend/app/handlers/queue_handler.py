@@ -4,6 +4,7 @@ from typing import AsyncGenerator, List, Tuple
 import time
 
 from app.handlers.modal_handler import ModalHandler
+from app.config import settings
 
 
 class QueueHandler:
@@ -30,9 +31,9 @@ class QueueHandler:
         # Background async workers(tasks), one per model
         self.workers = {}
 
-        # Batching config
-        self.batch_timeout = 0.1    # Max wait time (100ms)
-        self.max_batch_size = 5     # Max requests per batch(5)
+        # Batching config (from settings)
+        self.batch_timeout = settings.BATCH_TIMEOUT
+        self.max_batch_size = settings.MAX_BATCH_SIZE
 
     def start_workers(self):
         """

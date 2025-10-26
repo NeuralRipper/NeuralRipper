@@ -1,17 +1,64 @@
 # NeuralRipper
 
-**Production-ready LLM evaluation platform with RunPod integration, async request batching, and MLflow experiment tracking.**
+**Production-ready LLM evaluation platform with Modal GPU integration, async request batching, and real-time WebSocket streaming.**
 
 Built for scalable model inference using vLLM on serverless GPU infrastructure.
 
 ---
 
+## High-Priority TODOs
+
+### 1. Rate Limiting & IP-Based Frequency Control
+- Implement FastAPI middleware to extract real client IP (handle proxy headers)
+- Add Redis-backed rate limiter: 20 prompts per hour per IP
+- Return 429 status with retry-after header when limit exceeded
+- Log rate limit violations for abuse monitoring
+
+### 2. Deep Dive: Inference Flow Architecture
+- Create Excalidraw diagram mapping entire inference pipeline:
+  - Frontend: WebSocket client → `useEvalWebSocket` hook → message handling
+  - Backend: FastAPI WS endpoint → QueueHandler → ModalHandler
+  - Modal: Cold start → Model initialization → vLLM engine → Token generation
+  - Response path: Token streaming → WebSocket → Frontend state updates
+- Build minimal hands-on demo to internalize WebSocket + async patterns
+- Document timing breakdown: TTFT, cold start overhead, token latency
+
+### 3. Responsive Terminal UI
+- Replace hardcoded ASCII border widths with dynamic calculation
+- Use `useRef` + `ResizeObserver` to detect container width changes
+- Generate borders programmatically based on available space
+- Ensure proper wrapping/truncation for narrow viewports
+
+### 4. Makefile for Docker Workflows
+```makefile
+app-up:    docker-compose -f docker/docker-compose.dev.yml up -d
+app-down:  docker-compose -f docker/docker-compose.dev.yml down
+app-build: docker-compose -f docker/docker-compose.dev.yml build
+app-logs:  docker-compose -f docker/docker-compose.dev.yml logs -f
+app-test:  # Add test commands
+```
+
+### 5. MLflow Artifact Storage Cleanup & Optimization
+**Current Issues:**
+- Artifacts named by cryptic run_id/experiment_id (impossible to identify without querying MLflow)
+- Every training run saves its "best checkpoint" → hundreds of redundant artifacts in S3
+- No automatic cleanup of obsolete checkpoints when better ones are trained
+
+**Required Changes:**
+- Implement **global best-per-model tracking**: Only keep single best checkpoint per model across ALL runs
+- Add human-readable naming: `s3://bucket/artifacts/{model_name}/best_checkpoint_v{version}.pth`
+- Create cleanup script: Compare new checkpoint metrics against existing best, delete inferior ones
+- Add artifact versioning metadata in MLflow tags (loss, accuracy, timestamp)
+- Optional: Retention policy for top-N checkpoints per model (e.g., keep best 3)
+
+---
+
 ## Features
 
-**RunPod Serverless Integration**
-- OpenAI-compatible API endpoints for any vLLM model
+**Modal Serverless GPU Integration**
+- Serverless vLLM inference with automatic scaling
 - WebSocket streaming for real-time token generation
-- Multi-model endpoint management with automatic routing
+- Multi-model support with dynamic loading from volume
 
 **Intelligent Request Batching**
 - Async queue-based batching (100ms window, max 5 concurrent)
@@ -35,32 +82,41 @@ Built for scalable model inference using vLLM on serverless GPU infrastructure.
 ## Architecture
 
 ```
-┌─────────────┐
-│   Frontend  │  React + WebSocket → Real-time streaming UI
-└──────┬──────┘
-       │
-┌──────▼──────┐
-│    Nginx    │  Reverse proxy + SSL termination
-└──────┬──────┘
-       │
-┌──────▼──────┐
-│   Backend   │  FastAPI + Queue Handler
-└──────┬──────┘
-       │
-       ├─────────────────┬─────────────────┐
-       │                 │                 │
-┌──────▼──────┐   ┌──────▼──────┐   ┌─────▼─────┐
-│   RunPod    │   │   MLflow    │   │ AWS S3    │
-│  (vLLM GPU) │   │  (Tracking) │   │(Artifacts)│
-└─────────────┘   └─────────────┘   └───────────┘
+User Browser
+     │
+     ├─ WebSocket Connection (/ws/eval)
+     │
+     ▼
+┌─────────────────────────────────────────────┐
+│  Frontend (React + TypeScript)              │
+│  - useEvalWebSocket hook                    │
+│  - Real-time token streaming                │
+│  - Live metrics calculation                 │
+└──────────────────┬──────────────────────────┘
+                   │ HTTP/WS
+                   ▼
+┌─────────────────────────────────────────────┐
+│  Backend (FastAPI)                          │
+│  - WebSocket endpoint (eval_router)         │
+│  - QueueHandler (batching + async workers)  │
+│  - ModalHandler (GPU inference client)      │
+└──────────────────┬──────────────────────────┘
+                   │ Modal SDK
+                   ▼
+┌─────────────────────────────────────────────┐
+│  Modal Serverless GPU                       │
+│  - vLLM engine (Qwen model)                 │
+│  - Auto-scaling containers                  │
+│  - Token streaming via remote_gen()         │
+└─────────────────────────────────────────────┘
 ```
 
 **Stack:**
-- **Backend:** FastAPI, HTTPX, WebSocket
-- **Frontend:** React, TypeScript, TailwindCSS
-- **Infrastructure:** RunPod (GPU), AWS ECR, S3, Secrets Manager
-- **Serving:** vLLM (OpenAI-compatible), MLflow
-- **Package Manager:** UV (Python), PNPM (Node)
+- **Frontend:** React, TypeScript, TailwindCSS, Vite
+- **Backend:** FastAPI, Python 3.11, UV package manager
+- **GPU Inference:** Modal (serverless), vLLM
+- **Infrastructure:** Docker, AWS (Secrets Manager, ECR)
+- **Deployment:** Docker Compose (dev), ECR (prod)
 
 ---
 
@@ -68,8 +124,8 @@ Built for scalable model inference using vLLM on serverless GPU infrastructure.
 
 ### Prerequisites
 - Docker & Docker Compose
-- AWS Account (for Secrets Manager, ECR, S3)
-- RunPod Account (for GPU endpoints)
+- AWS Account (for Secrets Manager, ECR)
+- Modal Account (for serverless GPU inference)
 
 ### Local Development
 
@@ -84,9 +140,8 @@ export AWS_SECRET_ACCESS_KEY=your_secret
 
 # 3. Configure secrets in AWS Secrets Manager (neuralripper secret):
 # {
-#   "RUNPOD_API_KEY": "your_runpod_key",
-#   "RUNPOD_ENDPOINT_QWEN": "your_endpoint_id",
-#   "API_BASE_URL": "http://localhost:8000",
+#   "MODAL_TOKEN_ID": "your_modal_token_id",
+#   "MODAL_TOKEN_SECRET": "your_modal_token_secret",
 #   "GITHUB_API_KEY": "optional",
 #   "MLFLOW_TRACKING_USERNAME": "your_username",
 #   "MLFLOW_TRACKING_PASSWORD": "your_password",
@@ -114,11 +169,13 @@ docker compose -f docker/docker-compose.dev.yml logs -f backend
 docker compose -f docker/docker-compose.dev.yml down
 ```
 
+> **Note:** The architecture has been migrated from RunPod to Modal. Some documentation sections below may reference the old architecture and will be updated soon. For current implementation, see `backend/app/handlers/modal_handler.py` and the architecture diagram above.
+
 ---
 
 ## Core Components
 
-### 1. RunPod Integration (`backend/app/handlers/pod_handler.py`)
+### 1. Modal Integration (`backend/app/handlers/modal_handler.py`)
 
 Manages vLLM model endpoints on RunPod serverless infrastructure.
 

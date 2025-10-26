@@ -23,5 +23,7 @@ CMD ["/bin/bash", "-c", "\
     export AWS_SECRET_JSON=$(aws secretsmanager get-secret-value --secret-id neuralripper --region us-east-1 --query SecretString --output text) && \
     export RUNPOD_API_KEY=$(echo \"$AWS_SECRET_JSON\" | jq -r '.RUNPOD_API_KEY') && \
     export RUNPOD_ENDPOINT_QWEN=$(echo \"$AWS_SECRET_JSON\" | jq -r '.RUNPOD_ENDPOINT_QWEN') && \
+    export MODAL_TOKEN_ID=$(echo \"$AWS_SECRET_JSON\" | jq -r '.MODAL_TOKEN_ID') && \
+    export MODAL_TOKEN_SECRET=$(echo \"$AWS_SECRET_JSON\" | jq -r '.MODAL_TOKEN_SECRET') && \
     uv run uvicorn app.main:app --host 0.0.0.0 --port 8000\
 "]

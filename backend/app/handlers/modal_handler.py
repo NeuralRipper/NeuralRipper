@@ -8,6 +8,8 @@ import modal
 import asyncio
 from typing import AsyncGenerator
 
+from app.config import settings
+
 
 class ModalHandler:
     """
@@ -15,8 +17,8 @@ class ModalHandler:
     Replaces PodHandler for Modal-based streaming.
     """
 
-    def __init__(self, app_name: str = "neuralripper-inference"):
-        self.app_name = app_name
+    def __init__(self, app_name: str | None = None):
+        self.app_name = app_name or settings.MODAL_APP_NAME
         self._model_class = None
         self._model_instances = {}
 
@@ -34,16 +36,16 @@ class ModalHandler:
         return self._model_instances[model_name]
 
     def list_models(self) -> list[str]:
-        """List available models (hardcoded for now)."""
-        # TODO: Query Modal Volume for actual models
-        return ["qwen"]
+        """List available models from configuration."""
+        # TODO: Query Modal Volume for actual models dynamically
+        return settings.AVAILABLE_MODELS
 
     async def stream_inference(
         self,
         model_name: str,
         prompt: str,
-        temperature: float = 0.7,
-        max_tokens: int = 500
+        temperature: float | None = None,
+        max_tokens: int | None = None
     ) -> AsyncGenerator[str, None]:
         """
         Stream inference tokens from Modal GPU.
@@ -51,12 +53,16 @@ class ModalHandler:
         Args:
             model_name: Which model to use
             prompt: Input prompt
-            temperature: Sampling temperature
-            max_tokens: Max tokens to generate
+            temperature: Sampling temperature (defaults from config)
+            max_tokens: Max tokens to generate (defaults from config)
 
         Yields:
             Individual token strings as they're generated
         """
+        # Use config defaults if not provided
+        temperature = temperature if temperature is not None else settings.DEFAULT_TEMPERATURE
+        max_tokens = max_tokens if max_tokens is not None else settings.DEFAULT_MAX_TOKENS
+
         model = self.get_model_instance(model_name)
         messages = [{"role": "user", "content": prompt}]
 
@@ -69,10 +75,9 @@ class ModalHandler:
             max_tokens=max_tokens
         )
 
+        # Use lambda to avoid StopIteration crossing async boundary
         while True:
-            try:
-                # Run next() in thread pool to avoid blocking
-                chunk = await loop.run_in_executor(None, next, gen)
-                yield chunk
-            except StopIteration:
+            chunk = await loop.run_in_executor(None, lambda: next(gen, None))
+            if chunk is None:  # Generator exhausted
                 break
+            yield chunk

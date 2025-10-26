@@ -96,7 +96,7 @@ def download_model_from_huggingface(model_name: str, hf_model_id: str):
     print(f"✓ Model {model_name} cached in Volume")
 
 @app.cls(
-    gpu="A100",
+    gpu="T4",  # Cost-efficient GPU (~$0.60/hr vs A100 ~$3-4/hr)
     image=image,
     volumes={"/models": volume},
     scaledown_window=300,  # Keep warm 5 min

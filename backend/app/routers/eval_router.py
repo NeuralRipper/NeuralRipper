@@ -1,6 +1,8 @@
 import json
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from app.config import settings
+
 
 router = APIRouter(tags=["evaluation"])
 
@@ -9,8 +11,8 @@ router = APIRouter(tags=["evaluation"])
 async def evaluation(websocket: WebSocket):
     """
         WebSocket endpoint for streaming LLM inference.
-        
-        Accepts: {"model": "qwen-0.5b", "prompt": "your prompt"}
+
+        Accepts: {"model": "qwen", "prompt": "your prompt"}
         Streams: {"token": "..."}, {"done": true}
     """
     # wait and accept websocket connection from frontend
@@ -22,7 +24,7 @@ async def evaluation(websocket: WebSocket):
             # load data into json
             data = json.loads(message)
             # retrieve data from the ws message
-            model = data.get("model", "llama-3-70b")
+            model = data.get("model", settings.DEFAULT_MODEL)
             prompt = data.get("prompt", "")
 
             if not prompt:
