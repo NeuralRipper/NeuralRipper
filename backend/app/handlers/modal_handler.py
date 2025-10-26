@@ -5,6 +5,7 @@ Provides async streaming interface for queue_handler.
 """
 
 import modal
+import asyncio
 from typing import AsyncGenerator
 
 
@@ -59,9 +60,19 @@ class ModalHandler:
         model = self.get_model_instance(model_name)
         messages = [{"role": "user", "content": prompt}]
 
-        async for chunk in model.generate_stream.remote_gen(
+        # Modal's remote_gen() returns a SYNC generator, not async
+        # We need to run it in a thread pool to avoid blocking the event loop
+        loop = asyncio.get_event_loop()
+        gen = model.generate_stream.remote_gen(
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens
-        ):
-            yield chunk
+        )
+
+        while True:
+            try:
+                # Run next() in thread pool to avoid blocking
+                chunk = await loop.run_in_executor(None, next, gen)
+                yield chunk
+            except StopIteration:
+                break

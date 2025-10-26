@@ -2,11 +2,8 @@ import asyncio
 from collections import defaultdict
 from typing import AsyncGenerator, List, Tuple
 import time
-import json
 
-import httpx
-
-from app.handlers.pod_handler import PodHandler
+from app.handlers.modal_handler import ModalHandler
 
 
 class QueueHandler:
@@ -16,16 +13,15 @@ class QueueHandler:
     1. Client sends prompt via WebSocket
     2. stream_inference() puts (prompt, response_channel) into request_queue
     3. _collect_batch() waits 100ms, grabs up to 8 requests
-    4. _process_batch() sends batch to RunPod (async task, non-blocking)
-    5. As tokens arrive, _process_batch() routes them:
-        choice["index"] → response_channels[index].put(token)
+    4. _process_batch() sends batch to Modal (async task, non-blocking)
+    5. As tokens arrive, _process_batch() routes them to response channels
     6. stream_inference() wakes up (was blocked on response_channel.get())
     7. Yields token → WebSocket → Frontend
     8. Loop continues until None signal (end of stream)
     """
-    def __init__(self, pod_handler: PodHandler):
-        # pod handler to communicate with RunPod
-        self.pod_handler = pod_handler
+    def __init__(self, modal_handler: ModalHandler):
+        # modal handler to communicate with Modal GPUs
+        self.modal_handler = modal_handler
 
         # share queues for batching requests by model
         # {model_name: Queue of (prompt, response_channel)}
@@ -46,7 +42,7 @@ class QueueHandler:
         gpt2: worker2, while loop do the same
         ...
         """
-        for model in self.pod_handler.list_models():
+        for model in self.modal_handler.list_models():
             self.workers[model] = asyncio.create_task(self._worker(model))
 
     async def _worker(self, model: str):
@@ -123,85 +119,55 @@ class QueueHandler:
     
     async def _process_batch(self, model: str, batch: List[Tuple[str, asyncio.Queue]]):
         """
-        Send batch as CONCURRENT requests to vLLM, which auto batches them internally for GPU efficiency
+        Send batch as CONCURRENT requests to Modal, which auto batches them internally for GPU efficiency
         """
         # Python idiom, unpack operator with zip, prompts and response channels
         # [("hi", res_c1), ("hello", res_c2)] -> ("hi", "hello"), (res_c1, res_c2)
         prompts, response_channels = zip(*batch)
 
-        # Get correlated RunPod endpoint URL for this model, and API KEY for auth
-        url = self.pod_handler.get_url(model=model)
-        api_key = self.pod_handler.get_api_key()
-
-        # Headers for auth bearer
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-
         # Create separate async tasks for each prompt
         tasks = []
         for i, prompt in enumerate(prompts):
             task = asyncio.create_task(
-                self._stream_single_request(url, headers, model, prompt, response_channels[i])
+                self._stream_single_request(model, prompt, response_channels[i])
             )
             tasks.append(task)
         # Return a future aggregating results from the given coroutines/futures.
-        # Send all requests concurrently, vLLM will batch them internally    
+        # Send all requests concurrently, Modal vLLM will batch them internally
         await asyncio.gather(*tasks, return_exceptions=True)
 
     async def _stream_single_request(
         self,
-        url: str,
-        headers: dict,
         model: str,
         prompt: str,
         response_channel: asyncio.Queue
     ):
-        payload = {
-            "model": model,
-            "messages": [{"role": "user", "content": prompt}],
-            "stream": True,
-            "temperature": 0.7,
-            "max_tokens": 500
-        }
-        
+        """
+        Stream tokens from Modal GPU to response channel
+
+        Args:
+            model: Model name (e.g., "qwen")
+            prompt: User's input prompt
+            response_channel: Queue to send tokens back to client
+        """
         try:
-            # httpx and aiohttp both works as async http client, but httpx is preferrable with morden design and better maintained
-            # Use higher timeout for streaming LLM responses (can take several minutes)
-            async with httpx.AsyncClient(timeout=300.0) as client:
-                # Stream response from RunPod
-                async with client.stream(
-                    "POST",
-                    f"{url}/chat/completions",
-                    json=payload,
-                    headers=headers
-                ) as res:
-                    # Parse Server-Sent Events(SSE) format
-                    async for line in res.aiter_lines():
-                        if not line.strip() or line.strip() == "data: [DONE]":
-                            continue
-
-                        if line.startswith("data: "):
-                            # Parse json datas, remove "data: " prefix
-                            data = json.loads(line[6:])
-
-                            # Single Request, Route the tokens back to corresponding channel
-                            for choice in data.get("choices", []):
-                                delta = choice.get("delta", {})
-                                content = delta.get("content", "")
-
-                                if content:
-                                    # Send token to the client waiting on this channel
-                                    await response_channel.put(content)
+            # Stream tokens from Modal GPU using modal_handler
+            async for token in self.modal_handler.stream_inference(
+                model_name=model,
+                prompt=prompt,
+                temperature=0.7,
+                max_tokens=500
+            ):
+                # Send token to the client waiting on this channel
+                await response_channel.put(token)
 
         except Exception as e:
-            # If any error, send error msg to all clients no matter who causes it
+            # If any error, send error msg to client
             print(f"Error in _stream_single_request: {e}")
             import traceback
             traceback.print_exc()
             await response_channel.put(f"Error: {str(e)}")
         finally:
-            # Signal complete to all clients(None -> End of stream)
+            # Signal complete (None -> End of stream)
             print(f"Stream complete for prompt: {prompt[:50]}...")
             await response_channel.put(None)

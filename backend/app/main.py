@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 
 from app.routers import experiment_router, run_router, eval_router
-from app.handlers.pod_handler import PodHandler
+from app.handlers.modal_handler import ModalHandler
 from app.handlers.queue_handler import QueueHandler
 from contextlib import asynccontextmanager
 
@@ -12,16 +12,15 @@ from contextlib import asynccontextmanager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Initialize handlers
-    pod_handler = PodHandler()
-    queue_handler = QueueHandler(pod_handler=pod_handler)
+    modal_handler = ModalHandler()
+    queue_handler = QueueHandler(modal_handler=modal_handler)
 
-    pod_handler.init_endpoints()  # load endpoints from env
     queue_handler.start_workers()
 
     # Store in app state in FastAPI
-    app.state.pod_handler = pod_handler
+    app.state.modal_handler = modal_handler
     app.state.queue_handler = queue_handler
-    
+
     yield  # App runs here
 
 
