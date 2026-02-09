@@ -1,6 +1,6 @@
 services:
   mlflow:
-    image: 970547374353.dkr.ecr.us-east-1.amazonaws.com/neuralripper:mlflow
+    image: public.ecr.aws/i5n9j8u1/neuralripper:mlflow
     ports: ["5000:5000"]
     restart: unless-stopped
     volumes: [mlflow_data:/var/lib/mlflow/mlflow-db]
@@ -10,7 +10,7 @@ services:
       - AWS_DEFAULT_REGION=us-east-1
 
   backend:
-    image: 970547374353.dkr.ecr.us-east-1.amazonaws.com/neuralripper:backend
+    image: public.ecr.aws/i5n9j8u1/neuralripper:backend
     restart: unless-stopped
     environment:
       - MLFLOW_TRACKING_URI=http://mlflow:5000
@@ -19,12 +19,12 @@ services:
       - AWS_DEFAULT_REGION=us-east-1
 
   frontend:
-    image: 970547374353.dkr.ecr.us-east-1.amazonaws.com/neuralripper:frontend
+    image: public.ecr.aws/i5n9j8u1/neuralripper:frontend
     ports: ["3000:3000"]
     restart: unless-stopped
 
   nginx:
-    image: 970547374353.dkr.ecr.us-east-1.amazonaws.com/neuralripper:nginx
+    image: public.ecr.aws/i5n9j8u1/neuralripper:nginx
     ports: ["80:80", "443:443"]
     restart: unless-stopped
     depends_on: [frontend, backend, mlflow]

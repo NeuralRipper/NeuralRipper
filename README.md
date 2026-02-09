@@ -401,7 +401,7 @@ export AWS_ACCESS_KEY_ID=your_key
 export AWS_SECRET_ACCESS_KEY=your_secret
 
 # 2. Update ECR registry in docker/docker-compose.build.yml
-# Replace: 970547374353.dkr.ecr.us-west-2.amazonaws.com
+# Replace: public.ecr.aws/i5n9j8u1
 # With: YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com
 
 # 3. Create ECR repository

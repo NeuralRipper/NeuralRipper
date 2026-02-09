@@ -38,7 +38,7 @@ if [ -f ~/.aws/credentials ]; then
 fi
 
 echo "=== Logging into ECR ==="
-sg docker -c "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 970547374353.dkr.ecr.us-east-1.amazonaws.com"
+sg docker -c "aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws"
 
 echo "=== Cloning repo ==="
 if [ ! -d ~/NeuralRipper ]; then
