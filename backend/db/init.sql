@@ -3,7 +3,6 @@ CREATE TABLE users (
     google_id     VARCHAR(255) NOT NULL UNIQUE,
     email         VARCHAR(255) NOT NULL UNIQUE,
     name          VARCHAR(255),
-    avatar_url    VARCHAR(500),
     is_admin      BOOLEAN DEFAULT FALSE,
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
