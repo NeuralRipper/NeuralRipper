@@ -13,7 +13,7 @@ async def create_user(user: UserCreate, session: AsyncSession = Depends(get_sess
     user: the RequestBody defined as UserCreate
     session: injected via Depends(get_session)
     """
-    db_user = User(**db_user.model_dump())      # pydantic -> ORM  unpack and map to ORM instance
+    db_user = User(**user.model_dump())           # pydantic -> ORM  unpack and map to ORM instance
     session.add(db_user)                        # stage
     await session.commit()                      # write to Db
     await session.refresh(db_user)              # reload to get auto-gen id, created_at

@@ -3,7 +3,7 @@ SQLAlchemy Model definition for Models Table
 """
 
 from datetime import datetime
-from base import Base
+from db.base import Base
 from sqlalchemy import TIMESTAMP, BigInteger, Boolean, Enum, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func

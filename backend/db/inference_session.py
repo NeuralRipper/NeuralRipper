@@ -3,7 +3,7 @@ SQLAlchemy Model definition for Inference Sessions Table
 """
 
 from datetime import datetime
-from base import Base
+from db.base import Base
 from sqlalchemy import TIMESTAMP, ForeignKey, Index, JSON, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func

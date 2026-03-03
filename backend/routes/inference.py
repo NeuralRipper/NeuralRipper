@@ -1,21 +1,31 @@
 """
 Inference routes:
 POST /inference              -> create session + fire Modal tasks
+GET  /inference/sessions     -> public list of all sessions (for Results tab)
+GET  /inference/sessions/{id}-> session detail with all results
 GET  /inference/{id}/stream  -> SSE stream of results
 """
 
 import asyncio
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from dependencies.db import get_session
 from dependencies.auth import get_current_user
 from db.inference_session import InferenceSession
 from db.inference_result import InferenceResult
-from schemas.inference import InferenceCreate, InferenceCreateResponse, InferenceResultResponse
+from db.user import User
+from schemas.inference import (
+    InferenceCreate,
+    InferenceCreateResponse,
+    InferenceResultResponse,
+    SessionListResponse,
+    SessionDetailResponse,
+)
 from handlers.modal import run_modal_inference
 
 router = APIRouter(prefix="/inference")
@@ -59,6 +69,62 @@ async def create_inference(
         asyncio.create_task(run_modal_inference(r.id, r.model_id, body.prompt))
 
     return InferenceCreateResponse(session_id=inf_session.id, result_ids=result_ids)
+
+
+@router.get("/sessions", response_model=list[SessionListResponse])
+async def list_sessions(session: AsyncSession = Depends(get_session)):
+    """
+    Public list of all inference sessions, for the Results tab.
+    Returns sessions with user info, ordered newest first.
+    """
+    result = await session.execute(
+        select(InferenceSession, User.name, User.avatar_url)
+        .join(User, InferenceSession.user_id == User.id)
+        .order_by(InferenceSession.created_at.desc())
+        .limit(100)
+    )
+    rows = result.all()
+    return [
+        SessionListResponse(
+            id=row.InferenceSession.id,
+            user_name=row.name,
+            user_avatar=row.avatar_url,
+            prompt=row.InferenceSession.prompt,
+            model_ids=row.InferenceSession.model_ids,
+            created_at=row.InferenceSession.created_at,
+        )
+        for row in rows
+    ]
+
+
+@router.get("/sessions/{session_id}", response_model=SessionDetailResponse)
+async def get_session_detail(
+    session_id: int,
+    session: AsyncSession = Depends(get_session),
+):
+    """Full session detail with all inference results and metrics"""
+    inf_session = await session.get(InferenceSession, session_id)
+    if not inf_session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # get user info
+    user = await session.get(User, inf_session.user_id)
+
+    # get all results for this session
+    db_res = await session.execute(
+        select(InferenceResult).where(InferenceResult.session_id == session_id)
+    )
+    results = db_res.scalars().all()
+
+    return SessionDetailResponse(
+        id=inf_session.id,
+        user_name=user.name if user else None,
+        user_avatar=user.avatar_url if user else None,
+        prompt=inf_session.prompt,
+        model_ids=inf_session.model_ids,
+        created_at=inf_session.created_at,
+        results=[InferenceResultResponse.model_validate(r) for r in results],
+    )
 
 
 @router.get("/{session_id}/stream")
