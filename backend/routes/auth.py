@@ -12,7 +12,7 @@ from google.auth.transport import requests as google_requests
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.session import get_session
+from dependencies.db import get_session
 from db.user import User
 from settings import GOOGLE_CLIENT_ID, JWT_SECRET_KEY, JWT_ALGORITHM
 

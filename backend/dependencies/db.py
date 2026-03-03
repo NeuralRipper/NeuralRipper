@@ -1,5 +1,5 @@
 """
-Session dependency for FastAPI endpoints
+DB session dependency for FastAPI endpoints
 Grabs engine from app.state, yields one session per request
 
 Connection: TCP pipe to MySQL, pool managed by SQLAlchemy
