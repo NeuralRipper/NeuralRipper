@@ -10,6 +10,7 @@ export const setToken = (token: string) => localStorage.setItem("token", token)
 export const clearToken = () => localStorage.removeItem("token")
 
 // The core wrapper, all REST calls use this
+// <T> generic type, compile time only, tells compiler we will return type <xxx>, no worries
 export async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = getToken()
   const headers: Record<string, string> = {
@@ -26,7 +27,7 @@ export async function request<T>(path: string, options?: RequestInit): Promise<T
   if (!response.ok) {
     throw new Error(`${response.status} ${response.statusText}`)
   }
-  return response.json()
+  return response.json()   // always return Promise<any> at runtime
 }
 
 // WebSocket factory — inference.ts uses this
