@@ -1,16 +1,24 @@
 """
-DB session dependency for FastAPI endpoints
-Grabs engine from app.state, yields one session per request
+DB session dependency, one function for both HTTP routes and WebSocket.
 
-Connection: TCP pipe to MySQL, pool managed by SQLAlchemy
-Session: application level workspace, grab a connection from the pool and do ORM API, session.add/commit/query()
+HTTP:      Depends(get_session), FastAPI injects Request automatically
+WebSocket: call get_session(websocket) directly, same engine from app.state
 """
 
-from fastapi import Request
+from collections.abc import AsyncGenerator
+
+from fastapi import Request, WebSocket
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 
-async def get_session(request: Request) -> AsyncSession:
-    async_session = async_sessionmaker(request.app.state.engine, expire_on_commit=False)
-    async with async_session() as session:
+async def get_session(conn: Request | WebSocket) -> AsyncGenerator[AsyncSession]:
+    """
+    Yields a DB session from the engine stored in app.state by main.py lifespan.
+    Works for both Request (HTTP) and WebSocket — both have .app.state.engine.
+
+    HTTP route:  session: AsyncSession = Depends(get_session)
+    WebSocket:   async for session in get_session(websocket):
+    """
+    factory = async_sessionmaker(conn.app.state.engine, expire_on_commit=False)
+    async with factory() as session:
         yield session

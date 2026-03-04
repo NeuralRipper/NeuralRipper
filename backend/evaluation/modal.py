@@ -4,6 +4,8 @@ Defines the vLLM inference server that our backend calls remotely
 """
 
 import modal
+import time
+from vllm import LLM, SamplingParams
 
 vllm_image = (
     modal.Image.from_registry("nvidia/cuda:12.8.0-devel-ubuntu22.04", add_python="3.12")
@@ -31,8 +33,7 @@ def run_inference(hf_model_id: str, prompt: str, max_tokens: int = 512) -> dict:
     Runs on Modal GPU. Called remotely from our backend via .remote()
     Returns: {"response_text": ..., "ttft_ms": ..., "tpot_ms": ..., "total_tokens": ..., "e2e_latency_ms": ...}
     """
-    import time
-    from vllm import LLM, SamplingParams
+    
 
     start = time.perf_counter()
 

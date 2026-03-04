@@ -1,6 +1,12 @@
 """
-JWT auth dependency — use with Depends(get_current_user) on protected routes
-Extracts user_id from Bearer token in Authorization header
+JWT auth — one shared decode function, two entry points:
+
+- get_current_user()  — HTTP routes, auto-extracts Bearer token via Depends()
+- decode_jwt()        — WebSocket routes, call directly after reading first message
+
+HTTP routes use HTTPBearer which reads the Authorization header automatically.
+WebSocket has no HTTP headers after handshake, so the WS route reads the token
+from the first JSON message and calls decode_jwt() directly.
 """
 
 import jwt
@@ -8,17 +14,31 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from settings import JWT_SECRET_KEY, JWT_ALGORITHM
 
-bearer_scheme = HTTPBearer()  # extracts Bearer <token> from Authorization header
+bearer_scheme = HTTPBearer()
+
+
+def decode_jwt(token: str) -> int:
+    """
+    Decode JWT and return user_id (the "sub" claim).
+    Raises jwt.ExpiredSignatureError or jwt.InvalidTokenError on failure.
+
+    Used by:
+    - get_current_user() for HTTP routes (called internally)
+    - WebSocket routes (called directly after stripping "Bearer " prefix)
+    """
+    payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+    return payload["sub"]
 
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ) -> int:
+    """
+    HTTP route dependency, auto-extracts Bearer token from Authorization header.
+    Usage: user_id: int = Depends(get_current_user)
+    """
     try:
-        # Exact same pattern like encode, with same key and algo to decode the jwt token and retrieve user info
-        payload = jwt.decode(credentials.credentials, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-        return payload["sub"]  # subject: user_id
-    # HTTP 401, Unauthorized Error
+        return decode_jwt(credentials.credentials)
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:
