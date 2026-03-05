@@ -37,7 +37,7 @@ def create_jwt(user_id: int) -> str:
     Final: header.payload.signature
     """
     payload = {
-        "sub": user_id,
+        "sub": str(user_id),
         "exp": datetime.now(timezone.utc) + timedelta(hours=12),
     }
     return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)

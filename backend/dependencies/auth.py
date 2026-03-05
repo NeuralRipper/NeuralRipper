@@ -27,7 +27,7 @@ def decode_jwt(token: str) -> int:
     - WebSocket routes (called directly after stripping "Bearer " prefix)
     """
     payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-    return payload["sub"]
+    return int(payload["sub"])
 
 
 async def get_current_user(

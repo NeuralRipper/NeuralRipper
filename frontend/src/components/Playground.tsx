@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react"
+import { GoogleLogin } from "@react-oauth/google"
+import { useAuth } from "@/hooks/useAuth"
 import { useInferenceSocket } from "@/hooks/useInferenceSocket"
 import { listModels } from "@/api/models"
 import { createSession } from "@/api/inference"
@@ -10,11 +12,14 @@ import EXAMPLE_RESULTS from "./ExampleResults"
 
 
 export default function Playground() {
+  const { user, loading, login, logout } = useAuth()
   const [models, setModels] = useState<ModelResponse[]>([])
   const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [prompt, setPrompt] = useState("")
   const [sessionId, setSessionId] = useState<number | null>(null)
   const [submittedPrompt, setSubmittedPrompt] = useState<string | null>(null)
+  const [modelDropdownOpen, setModelDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
   const cardsRef = useRef<HTMLDivElement>(null)
 
   const { inferenceResults, isComplete, error } = useInferenceSocket(sessionId)
@@ -22,11 +27,22 @@ export default function Playground() {
   useEffect(() => { listModels().then(setModels).catch(console.error) }, [])
   useEffect(() => { cardsRef.current?.scrollTo({ top: cardsRef.current.scrollHeight, behavior: "smooth" }) }, [inferenceResults])
 
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setModelDropdownOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
+  }, [])
+
   const toggle = (id: number) =>
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
   const submit = async () => {
-    if (!prompt.trim() || selectedIds.length === 0) return
+    if (!user || !prompt.trim() || selectedIds.length === 0) return
     setSubmittedPrompt(prompt)
     const res = await createSession({ prompt, model_ids: selectedIds })
     setSessionId(res.session_id)
@@ -52,7 +68,27 @@ export default function Playground() {
         {/* Header */}
         <div className="border border-border bg-card px-4 py-3 flex items-center justify-between">
           <span className="text-lg font-bold text-cyan-400">NEURAL RIPPER</span>
-          <span className="text-xs text-muted-foreground">LLM EVAL LAB v0.1</span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground">LLM EVAL LAB v0.1</span>
+            {loading ? null : user ? (
+              <div className="flex items-center gap-2">
+                {user.avatar_url && (
+                  <img src={user.avatar_url} alt="" className="w-6 h-6 rounded-full" />
+                )}
+                <span className="text-xs text-foreground">{user.name}</span>
+                <button onClick={logout} className="text-xs text-muted-foreground hover:text-red-400 cursor-pointer">
+                  logout
+                </button>
+              </div>
+            ) : (
+              <GoogleLogin
+                onSuccess={r => { if (r.credential) login(r.credential) }}
+                size="small"
+                theme="filled_black"
+                shape="pill"
+              />
+            )}
+          </div>
         </div>
 
         {/* Two-panel layout: left prompt cards, right metrics table */}
@@ -60,22 +96,52 @@ export default function Playground() {
 
           {/* Left — Prompt cards + input */}
           <div className="w-1/2 border border-border bg-card flex flex-col" style={{ height: "calc(100vh - 120px)" }}>
-            {/* Model select */}
-            <div className="border-b border-border p-3 flex flex-wrap gap-3 text-sm">
-              {models.map(m => (
-                <label key={m.id} className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(m.id)}
-                    onChange={() => toggle(m.id)}
-                    disabled={running}
-                    className="accent-cyan-400"
-                  />
-                  <span className={selectedIds.includes(m.id) ? "text-cyan-400" : "text-muted-foreground"}>
-                    {m.name}
-                  </span>
-                </label>
-              ))}
+            {/* Model select dropdown */}
+            <div className="border-b border-border p-3 text-sm" ref={dropdownRef}>
+              <div className="relative">
+                <button
+                  onClick={() => setModelDropdownOpen(prev => !prev)}
+                  disabled={running}
+                  className="flex items-center gap-2 text-cyan-400 hover:text-cyan-300 disabled:opacity-50 cursor-pointer"
+                >
+                  <span className="text-muted-foreground">[</span>
+                  {selectedIds.length === 0
+                    ? "Select Models"
+                    : `${selectedIds.length} model${selectedIds.length > 1 ? "s" : ""} selected`}
+                  <span className="text-muted-foreground">]</span>
+                  <span className="text-xs text-muted-foreground">{modelDropdownOpen ? "▲" : "▼"}</span>
+                </button>
+                {modelDropdownOpen && (
+                  <div className="absolute top-full left-0 mt-1 z-20 border border-border bg-card min-w-56 py-1">
+                    {models.map(m => (
+                      <label
+                        key={m.id}
+                        className="flex items-center gap-3 px-3 py-1.5 cursor-pointer select-none hover:bg-muted/30"
+                      >
+                        <span
+                          className={`w-4 h-4 border flex items-center justify-center text-xs ${
+                            selectedIds.includes(m.id)
+                              ? "border-cyan-400 bg-cyan-400/20 text-cyan-400"
+                              : "border-muted-foreground text-transparent"
+                          }`}
+                        >
+                          ✓
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(m.id)}
+                          onChange={() => toggle(m.id)}
+                          className="sr-only"
+                        />
+                        <span className={selectedIds.includes(m.id) ? "text-cyan-400" : "text-muted-foreground"}>
+                          {m.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground ml-auto">{m.quantization}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Prompt cards scrollable */}
@@ -119,7 +185,9 @@ export default function Playground() {
                 />
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Shift+Enter for new line</span>
+                <span className="text-muted-foreground">
+                  {!user ? "Login to submit" : "Shift+Enter for new line"}
+                </span>
                 {running && <span className="text-cyan-400 animate-pulse">RUNNING...</span>}
               </div>
             </div>

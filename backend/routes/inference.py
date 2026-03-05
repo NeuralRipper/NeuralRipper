@@ -177,7 +177,7 @@ async def inference_ws(websocket: WebSocket, session_id: int):
                 model_id=r.model_id,
                 prompt=inf_session.prompt,
                 websocket=websocket,
-                db_session=session,
+                engine=websocket.app.state.engine,
             )
             for r in results
         ]

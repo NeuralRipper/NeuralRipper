@@ -5,7 +5,6 @@ Defines the vLLM inference server that our backend calls remotely
 
 import modal
 import time
-from vllm import LLM, SamplingParams
 
 vllm_image = (
     modal.Image.from_registry("nvidia/cuda:12.8.0-devel-ubuntu22.04", add_python="3.12")
@@ -21,7 +20,7 @@ vllm_cache_vol = modal.Volume.from_name("vllm-cache", create_if_missing=True)
 
 @app.function(
     image=vllm_image,
-    gpu="A10G",
+    gpu="T4",
     timeout=5 * 60,
     volumes={
         "/root/.cache/huggingface": hf_cache_vol,
@@ -33,6 +32,7 @@ def run_inference(hf_model_id: str, prompt: str, max_tokens: int = 512) -> dict:
     Runs on Modal GPU. Called remotely from our backend via .remote()
     Returns dict with response text, latency metrics, token counts, and GPU stats.
     """
+    from vllm import LLM, SamplingParams
     import pynvml
 
     # GPU snapshot before inference

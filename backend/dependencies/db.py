@@ -7,11 +7,11 @@ WebSocket: call get_session(websocket) directly, same engine from app.state
 
 from collections.abc import AsyncGenerator
 
-from fastapi import Request, WebSocket
+from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 
-async def get_session(conn: Request | WebSocket) -> AsyncGenerator[AsyncSession]:
+async def get_session(conn: Request) -> AsyncGenerator[AsyncSession]:  # type: ignore[arg-type]
     """
     Yields a DB session from the engine stored in app.state by main.py lifespan.
     Works for both Request (HTTP) and WebSocket — both have .app.state.engine.

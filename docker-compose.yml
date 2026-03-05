@@ -27,6 +27,10 @@ services:
       MYSQL_USER: neuralripper
       MYSQL_PASSWORD: dev
       MYSQL_DATABASE: neuralripper
+      GOOGLE_CLIENT_ID: 885687504549-vun2868u6r1r4qgula373uq307haq62i.apps.googleusercontent.com
+      JWT_SECRET_KEY: dev-secret-change-in-prod
+      MODAL_TOKEN_ID: ak-7efH7y4kkFjhhqTkepxKuj
+      MODAL_TOKEN_SECRET: as-GcxOQsULJpLLGbwKJg2zIc
 
 volumes:
   mysql_data:
