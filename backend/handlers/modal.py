@@ -60,33 +60,36 @@ async def run_modal_inference(
         from evaluation.modal import run_inference
         modal_result = run_inference.remote(model.hf_model_id, prompt)
 
+        # fields to persist and push to client
+        fields = {
+            "response_text": modal_result["response_text"],
+            "finish_reason": modal_result["finish_reason"],
+            "prompt_tokens": modal_result["prompt_tokens"],
+            "completion_tokens": modal_result["completion_tokens"],
+            "total_tokens": modal_result["total_tokens"],
+            "ttft_ms": modal_result["ttft_ms"],
+            "tpot_ms": modal_result["tpot_ms"],
+            "tokens_per_second": modal_result["tokens_per_second"],
+            "e2e_latency_ms": modal_result["e2e_latency_ms"],
+            "gpu_name": modal_result["gpu_name"],
+            "gpu_utilization_pct": modal_result["gpu_utilization_pct"],
+            "gpu_memory_used_mb": modal_result["gpu_memory_used_mb"],
+            "gpu_memory_total_mb": modal_result["gpu_memory_total_mb"],
+        }
+
         # push result to client immediately via WebSocket
         await websocket.send_json({
             "type": "model_complete",
             "model_id": model_id,
             "model_name": model.name,
-            "result": {
-                "id": result_id,
-                "model_id": model_id,
-                "status": "completed",
-                "response_text": modal_result["response_text"],
-                "ttft_ms": modal_result["ttft_ms"],
-                "tpot_ms": modal_result["tpot_ms"],
-                "tokens_per_second": modal_result["tokens_per_second"],
-                "total_tokens": modal_result["total_tokens"],
-                "e2e_latency_ms": modal_result["e2e_latency_ms"],
-            },
+            "result": {"id": result_id, "model_id": model_id, "status": "completed", **fields},
         })
 
         # save to DB (for Results tab, historical sessions are queryable)
         result = await db_session.get(InferenceResult, result_id)
         result.status = "completed"
-        result.response_text = modal_result["response_text"]
-        result.ttft_ms = modal_result["ttft_ms"]
-        result.tpot_ms = modal_result["tpot_ms"]
-        result.tokens_per_second = modal_result["tokens_per_second"]
-        result.total_tokens = modal_result["total_tokens"]
-        result.e2e_latency_ms = modal_result["e2e_latency_ms"]
+        for key, value in fields.items():
+            setattr(result, key, value)
         await db_session.commit()
 
     except Exception as e:

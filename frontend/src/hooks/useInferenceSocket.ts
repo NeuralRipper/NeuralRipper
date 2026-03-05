@@ -25,8 +25,10 @@ export function useInferenceSocket(sessionId: number | null) {
           setInferenceResults(prev =>
             new Map(prev).set(msg.model_id!, {
               id: 0, model_id: msg.model_id!, status: "pending",
-              response_text: null, ttft_ms: null, tpot_ms: null,
-              tokens_per_second: null, total_tokens: null, e2e_latency_ms: null,
+              response_text: null, finish_reason: null,
+              prompt_tokens: null, completion_tokens: null, total_tokens: null,
+              ttft_ms: null, tpot_ms: null, tokens_per_second: null, e2e_latency_ms: null,
+              gpu_name: null, gpu_utilization_pct: null, gpu_memory_used_mb: null, gpu_memory_total_mb: null,
             })
           )
           break

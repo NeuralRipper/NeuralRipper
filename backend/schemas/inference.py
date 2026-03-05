@@ -19,11 +19,21 @@ class InferenceResultResponse(BaseModel):
     model_id: int
     status: str         # pending | streaming | completed | failed
     response_text: str | None
+    finish_reason: str | None
+    # token counts
+    prompt_tokens: int | None
+    completion_tokens: int | None
+    total_tokens: int | None
+    # latency
     ttft_ms: float | None
     tpot_ms: float | None
     tokens_per_second: float | None
-    total_tokens: int | None
     e2e_latency_ms: float | None
+    # GPU
+    gpu_name: str | None
+    gpu_utilization_pct: int | None
+    gpu_memory_used_mb: int | None
+    gpu_memory_total_mb: int | None
     model_config = ConfigDict(from_attributes=True)
 
 
