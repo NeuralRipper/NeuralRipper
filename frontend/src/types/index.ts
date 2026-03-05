@@ -63,27 +63,11 @@ export interface SessionDetailResponse extends SessionListResponse {
   results: InferenceResultResponse[]
 }
 
-// WebSocket messages (server -> client), matches routes/inference.py ws endpoint
-export interface WsModelStart {
-  type: "model_start"
-  model_id: number
-  model_name: string
+// WebSocket message (server -> client), single flat type with optional fields per msg type
+export interface WsMessage {
+  type: "model_start" | "model_complete" | "model_error" | "session_complete" | "error"
+  model_id?: number
+  model_name?: string
+  result?: InferenceResultResponse
+  message?: string
 }
-
-export interface WsModelComplete {
-  type: "model_complete"
-  model_id: number
-  result: InferenceResultResponse
-}
-
-export interface WsModelError {
-  type: "model_error"
-  model_id: number
-  message: string
-}
-
-export interface WsSessionDone {
-  type: "session_complete"
-}
-
-export type WsMessage = WsModelStart | WsModelComplete | WsModelError | WsSessionDone
