@@ -16,7 +16,7 @@ class InferenceSession(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     prompt: Mapped[str] = mapped_column(Text, nullable=False)
     model_ids: Mapped[list] = mapped_column(JSON, nullable=False)
-    gpu_tier: Mapped[str] = mapped_column(String(10), default="a10g")
+    gpu_tier: Mapped[str] = mapped_column(String(10), default="t4")
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
 
     __table_args__ = (

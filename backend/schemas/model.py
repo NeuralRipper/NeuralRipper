@@ -12,5 +12,6 @@ class ModelResponse(BaseModel):
     description: str | None
     is_downloaded: bool
     vram_gb: int | None
+    min_gpu: str | None
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)

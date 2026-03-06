@@ -1,12 +1,23 @@
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
+
+MAX_MODELS_PER_SESSION = 5
 
 
 class InferenceCreate(BaseModel):
     """Client sends a prompt to create 1~N new inferences"""
     prompt: str
     model_ids: list[int]
-    gpu_tier: str = "a10g"
+    gpu_tier: str = "t4"
+
+    @field_validator("model_ids")
+    @classmethod
+    def limit_models(cls, v: list[int]) -> list[int]:
+        if len(v) > MAX_MODELS_PER_SESSION:
+            raise ValueError(f"Maximum {MAX_MODELS_PER_SESSION} models per session")
+        if len(v) == 0:
+            raise ValueError("At least 1 model required")
+        return v
 
 
 class InferenceCreateResponse(BaseModel):

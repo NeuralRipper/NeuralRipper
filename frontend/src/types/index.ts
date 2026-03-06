@@ -25,6 +25,7 @@ export interface ModelResponse {
   description: string | null
   is_downloaded: boolean
   vram_gb: number | null
+  min_gpu: string | null
   created_at: string
 }
 

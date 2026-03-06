@@ -21,4 +21,5 @@ class Model(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_downloaded: Mapped[bool] = mapped_column(Boolean, default=False)
     vram_gb: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    min_gpu: Mapped[str | None] = mapped_column(String(10), nullable=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
