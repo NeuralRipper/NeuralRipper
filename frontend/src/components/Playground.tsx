@@ -3,13 +3,16 @@ import { GoogleLogin } from "@react-oauth/google"
 import { useAuth } from "@/hooks/useAuth"
 import { useInferenceSocket } from "@/hooks/useInferenceSocket"
 import { listModels } from "@/api/models"
-import { createSession } from "@/api/inference"
-import type { ModelResponse } from "@/types"
+import { createSession, getSessionDetail } from "@/api/inference"
+import type { ModelResponse, InferenceResultResponse } from "@/types"
 import PromptCard from "./PromptCard"
 import MetricsTable from "./MetricsTable"
 import Charts from "./Charts"
 import EXAMPLE_RESULTS from "./ExampleResults"
 
+const SESSION_KEY = "nr_session_id"
+
+const MAX_MODELS = 5
 
 const GPU_TIERS = [
   { id: "t4", label: "T4", vram: 16 },
@@ -19,20 +22,60 @@ const GPU_TIERS = [
 ] as const
 
 const GPU_VRAM: Record<string, number> = { t4: 16, a10g: 24, a100: 40, h100: 80 }
+const GPU_RANK: Record<string, number> = { t4: 0, a10g: 1, a100: 2, h100: 3 }
+
+function isGpuCompatible(minGpu: string | null, selectedTier: string): boolean {
+  if (!minGpu) return true
+  return (GPU_RANK[selectedTier] ?? 0) >= (GPU_RANK[minGpu] ?? 0)
+}
 
 export default function Playground() {
   const { user, loading, login, logout } = useAuth()
   const [models, setModels] = useState<ModelResponse[]>([])
   const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [prompt, setPrompt] = useState("")
-  const [gpuTier, setGpuTier] = useState("a10g")
+  const [gpuTier, setGpuTier] = useState("t4")
   const [sessionId, setSessionId] = useState<number | null>(null)
   const [submittedPrompt, setSubmittedPrompt] = useState<string | null>(null)
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false)
+  const [recoveredResults, setRecoveredResults] = useState<Map<number, InferenceResultResponse> | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const { inferenceResults, isComplete, error } = useInferenceSocket(sessionId)
+  const { inferenceResults, isComplete, error, cancel } = useInferenceSocket(sessionId)
 
   useEffect(() => { listModels().then(setModels).catch(console.error) }, [])
+
+  // Recover session from sessionStorage on mount
+  useEffect(() => {
+    const stored = sessionStorage.getItem(SESSION_KEY)
+    if (!stored) return
+    const id = parseInt(stored, 10)
+    if (isNaN(id)) return
+
+    getSessionDetail(id).then(detail => {
+      setSubmittedPrompt(detail.prompt)
+      const map = new Map<number, InferenceResultResponse>()
+      for (const r of detail.results) {
+        map.set(r.model_id, r)
+      }
+      setRecoveredResults(map)
+    }).catch(() => {
+      sessionStorage.removeItem(SESSION_KEY)
+    })
+  }, [])
+
+  // Persist sessionId to sessionStorage
+  useEffect(() => {
+    if (sessionId) {
+      sessionStorage.setItem(SESSION_KEY, String(sessionId))
+    }
+  }, [sessionId])
+
+  // Clear sessionStorage when session completes
+  useEffect(() => {
+    if (isComplete && sessionId) {
+      sessionStorage.removeItem(SESSION_KEY)
+    }
+  }, [isComplete, sessionId])
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -48,20 +91,42 @@ export default function Playground() {
   const toggle = (id: number) =>
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
+  // Deselect incompatible models when GPU tier changes
+  useEffect(() => {
+    setSelectedIds(prev => prev.filter(id => {
+      const m = models.find(x => x.id === id)
+      if (!m) return true
+      const vramOk = !(m.vram_gb != null && m.vram_gb > GPU_VRAM[gpuTier])
+      return vramOk && isGpuCompatible(m.min_gpu, gpuTier)
+    }))
+  }, [gpuTier, models])
+
   const submit = async () => {
     if (!user || !prompt.trim() || selectedIds.length === 0) return
+    setRecoveredResults(null)
     setSubmittedPrompt(prompt)
     const res = await createSession({ prompt, model_ids: selectedIds, gpu_tier: gpuTier })
     setSessionId(res.session_id)
   }
 
-  const running = sessionId !== null && !isComplete
-  const hasResults = inferenceResults.size > 0
+  const reset = () => {
+    if (running) cancel()
+    setSessionId(null)
+    setSubmittedPrompt(null)
+    setRecoveredResults(null)
+    sessionStorage.removeItem(SESSION_KEY)
+  }
 
-  // Build metrics rows from completed results
+  const running = sessionId !== null && !isComplete
+
+  // Use live results if streaming, recovered results if page was refreshed, else example
+  const displayResults = inferenceResults.size > 0 ? inferenceResults : recoveredResults
+  const hasResults = displayResults !== null && displayResults.size > 0
+
+  // Build metrics rows
   const metricsRows = hasResults
-    ? Array.from(inferenceResults.entries())
-      .filter(([, r]) => r.status === "streaming" || r.status === "completed")
+    ? Array.from(displayResults!.entries())
+      .filter(([, r]) => r.status === "streaming" || r.status === "completed" || r.status === "failed")
       .map(([modelId, result]) => ({
         name: models.find(m => m.id === modelId)?.name ?? `Model ${modelId}`,
         result,
@@ -139,35 +204,45 @@ export default function Playground() {
                 </div>
                 {modelDropdownOpen && (
                   <div className="absolute top-full left-0 mt-1 z-20 border border-border bg-card min-w-56 py-1">
-                    {models.map(m => (
-                      <label
-                        key={m.id}
-                        className="flex items-center gap-3 px-3 py-1.5 cursor-pointer select-none hover:bg-muted/30"
-                      >
-                        <span
-                          className={`w-4 h-4 border flex items-center justify-center text-xs ${
-                            selectedIds.includes(m.id)
-                              ? "border-cyan-400 bg-cyan-400/20 text-cyan-400"
-                              : "border-muted-foreground text-transparent"
+                    {models.map(m => {
+                      const gpuOk = isGpuCompatible(m.min_gpu, gpuTier)
+                      const vramOk = !(m.vram_gb != null && m.vram_gb > GPU_VRAM[gpuTier])
+                      const atLimit = selectedIds.length >= MAX_MODELS && !selectedIds.includes(m.id)
+                      const blocked = !gpuOk || !vramOk || atLimit
+
+                      return (
+                        <label
+                          key={m.id}
+                          className={`flex items-center gap-3 px-3 py-1.5 select-none ${
+                            blocked ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:bg-muted/30"
                           }`}
                         >
-                          ✓
-                        </span>
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(m.id)}
-                          onChange={() => toggle(m.id)}
-                          className="sr-only"
-                        />
-                        <span className={selectedIds.includes(m.id) ? "text-cyan-400" : "text-muted-foreground"}>
-                          {m.name}
-                        </span>
-                        <span className="text-xs text-muted-foreground ml-auto">{m.quantization}</span>
-                        {m.vram_gb != null && m.vram_gb > GPU_VRAM[gpuTier] && (
-                          <span className="text-red-400 text-xs font-bold">OOM</span>
-                        )}
-                      </label>
-                    ))}
+                          <span
+                            className={`w-4 h-4 border flex items-center justify-center text-xs ${
+                              selectedIds.includes(m.id)
+                                ? "border-cyan-400 bg-cyan-400/20 text-cyan-400"
+                                : "border-muted-foreground text-transparent"
+                            }`}
+                          >
+                            ✓
+                          </span>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(m.id)}
+                            onChange={() => !blocked && toggle(m.id)}
+                            disabled={blocked}
+                            className="sr-only"
+                          />
+                          <span className={selectedIds.includes(m.id) ? "text-cyan-400" : "text-muted-foreground"}>
+                            {m.name}
+                          </span>
+                          <span className="text-xs text-muted-foreground ml-auto">{m.quantization}</span>
+                          {!vramOk && <span className="text-red-400 text-xs font-bold">OOM</span>}
+                          {!gpuOk && <span className="text-red-400 text-xs font-bold">{m.min_gpu}+</span>}
+                          {atLimit && <span className="text-yellow-400 text-xs font-bold">MAX</span>}
+                        </label>
+                      )
+                    })}
                   </div>
                 )}
               </div>
@@ -176,7 +251,7 @@ export default function Playground() {
             {/* Prompt cards — flex even split */}
             <div className="flex-1 flex flex-col p-3 gap-3 min-h-0">
               {hasResults
-                ? Array.from(inferenceResults.entries()).map(([modelId, result]) => (
+                ? Array.from(displayResults!.entries()).map(([modelId, result]) => (
                   <div key={modelId} className="flex-1 min-h-0">
                     <PromptCard
                       result={result}
@@ -196,7 +271,7 @@ export default function Playground() {
                 )
               }
             </div>
-            {/* Chat input — pinned to bottom of right panel */}
+            {/* Chat input — pinned to bottom */}
             <div className="border-t border-border p-3 space-y-2">
               <div className="flex items-start gap-2">
                 <span className="text-yellow-400 mt-1">_</span>
@@ -214,14 +289,30 @@ export default function Playground() {
                 <span className="text-muted-foreground">
                   {!user ? "Login to submit" : "Shift+Enter for new line"}
                 </span>
-                {running && <span className="text-cyan-400 animate-pulse">RUNNING...</span>}
-                {error && <span className="text-red-400">{error}</span>}
-                {isComplete && hasResults && !error && <span className="text-green-400">session complete</span>}
+                <div className="flex items-center gap-3">
+                  {running && (
+                    <>
+                      <span className="text-cyan-400 animate-pulse">RUNNING...</span>
+                      <button onClick={cancel} className="text-red-400 hover:text-red-300 cursor-pointer">
+                        STOP
+                      </button>
+                    </>
+                  )}
+                  {error && <span className="text-red-400">{error}</span>}
+                  {isComplete && hasResults && !error && (
+                    <span className="text-green-400">session complete</span>
+                  )}
+                  {hasResults && !running && (
+                    <button onClick={reset} className="text-muted-foreground hover:text-foreground cursor-pointer">
+                      RESET
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Right Metrics table + chat input */}
+          {/* Right Metrics table + charts */}
           <div className="w-1/2 border border-border bg-card flex flex-col" style={{ height: "calc(100vh - 120px)" }}>
             <div className="flex-1 overflow-y-auto p-3 space-y-4">
               <div>

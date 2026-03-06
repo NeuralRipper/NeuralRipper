@@ -1,27 +1,39 @@
 import { connectInferenceSocket } from "@/api/inference"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import type { WsMessage, InferenceResultResponse } from "@/types"
 
 export function useInferenceSocket(sessionId: number | null) {
-  // {model_id: infer_result with all metrics}
   const [inferenceResults, setInferenceResults] = useState<Map<number, InferenceResultResponse>>(new Map())
-  const [isComplete, setIsComplete] = useState(false)   // only for current session status
+  const [isComplete, setIsComplete] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const wsRef = useRef<WebSocket | null>(null)
+  // Client-side timing: track when each model started and first token arrived
+  const timingRef = useRef<Map<number, { startedAt: number; firstTokenAt?: number; tokenCount: number }>>(new Map())
+
+  const cancel = () => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: "cancel" }))
+    }
+    setIsComplete(true)
+  }
 
   useEffect(() => {
     if (!sessionId) return
 
     const ws = connectInferenceSocket(sessionId)
+    wsRef.current = ws
     setIsComplete(false)
     setError(null)
     setInferenceResults(new Map())
+    timingRef.current = new Map()
 
-    // ws.onmessage is a callback function, browser calls it each time a message arrives
     ws.onmessage = (event) => {
       const msg: WsMessage = JSON.parse(event.data)
+      const now = performance.now()
 
       switch (msg.type) {
         case "model_start":
+          timingRef.current.set(msg.model_id!, { startedAt: now, tokenCount: 0 })
           setInferenceResults(prev =>
             new Map(prev).set(msg.model_id!, {
               id: 0, model_id: msg.model_id!, status: "pending",
@@ -49,17 +61,36 @@ export function useInferenceSocket(sessionId: number | null) {
             })
           })
           break
-        case "token":
+        case "token": {
+          const timing = timingRef.current.get(msg.model_id!)
+          if (timing) {
+            timing.tokenCount++
+            if (!timing.firstTokenAt) {
+              timing.firstTokenAt = now
+            }
+          }
           setInferenceResults(prev => {
             const existing = prev.get(msg.model_id!)
             if (!existing) return prev
+            // Compute client-side live metrics
+            const liveMetrics: Partial<InferenceResultResponse> = {}
+            if (timing?.firstTokenAt) {
+              liveMetrics.ttft_ms = existing.ttft_ms ?? (timing.firstTokenAt - timing.startedAt)
+              const elapsed = (now - timing.firstTokenAt) / 1000
+              if (elapsed > 0 && timing.tokenCount > 1) {
+                liveMetrics.tokens_per_second = existing.tokens_per_second ?? (timing.tokenCount / elapsed)
+              }
+              liveMetrics.e2e_latency_ms = existing.e2e_latency_ms ?? (now - timing.startedAt)
+            }
             return new Map(prev).set(msg.model_id!, {
               ...existing,
+              ...liveMetrics,
               status: "streaming",
               response_text: (existing.response_text ?? "") + (msg.delta ?? ""),
             })
           })
           break
+        }
         case "metrics_update":
           setInferenceResults(prev => {
             const existing = prev.get(msg.model_id!)
@@ -78,7 +109,11 @@ export function useInferenceSocket(sessionId: number | null) {
         case "model_error":
           setInferenceResults(prev => {
             const existing = prev.get(msg.model_id!)
-            return new Map(prev).set(msg.model_id!, { ...existing!, status: "failed" })
+            return new Map(prev).set(msg.model_id!, {
+              ...existing!,
+              status: "failed",
+              response_text: existing?.response_text ?? msg.message ?? null,
+            })
           })
           break
         case "session_complete":
@@ -93,8 +128,11 @@ export function useInferenceSocket(sessionId: number | null) {
 
     ws.onerror = () => setIsComplete(true)
 
-    return () => ws.close()
+    return () => {
+      ws.close()
+      wsRef.current = null
+    }
   }, [sessionId])
 
-  return { inferenceResults, isComplete, error }
+  return { inferenceResults, isComplete, error, cancel }
 }

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react"
 import type { InferenceResultResponse } from "@/types"
 
 export default function PromptCard({ result, name, streaming }: {
@@ -5,6 +6,13 @@ export default function PromptCard({ result, name, streaming }: {
     name: string
     streaming?: boolean
 }) {
+    const scrollRef = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        if (streaming && scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+        }
+    }, [result.response_text, streaming])
     const done = result.status === "completed"
 
     const statusText =
@@ -29,7 +37,7 @@ export default function PromptCard({ result, name, streaming }: {
             </div>
 
             {/* LLM response — scrollable within card */}
-            <div className="text-sm text-foreground whitespace-pre-wrap overflow-y-auto flex-1 min-h-0 mt-1">
+            <div ref={scrollRef} className="text-sm text-foreground whitespace-pre-wrap overflow-y-auto flex-1 min-h-0 mt-1">
                 {result.response_text ?? (
                     <span className="text-muted-foreground animate-pulse">
                         {result.status === "cold_start"

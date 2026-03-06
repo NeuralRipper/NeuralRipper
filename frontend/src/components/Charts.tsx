@@ -1,9 +1,12 @@
+import { useState } from "react"
 import type { InferenceResultResponse } from "@/types"
 
 interface ChartRow {
     name: string
     result: InferenceResultResponse
 }
+
+type SortDir = "asc" | "desc"
 
 // Muted colors matching the archive terminal aesthetic
 const barStyles = {
@@ -28,11 +31,26 @@ const barStyles = {
 }
 
 export default function Charts({ rows }: { rows: ChartRow[] }) {
+    const [latencySort, setLatencySort] = useState<SortDir>("asc")
+    const [resourceSort, setResourceSort] = useState<SortDir>("desc")
+
     if (rows.length === 0) return null
+
+    const latencyRows = [...rows].sort((a, b) => {
+        const aVal = a.result.e2e_latency_ms ?? 0
+        const bVal = b.result.e2e_latency_ms ?? 0
+        return latencySort === "asc" ? aVal - bVal : bVal - aVal
+    })
+
+    const resourceRows = [...rows].sort((a, b) => {
+        const aVal = a.result.gpu_memory_used_mb ?? 0
+        const bVal = b.result.gpu_memory_used_mb ?? 0
+        return resourceSort === "asc" ? aVal - bVal : bVal - aVal
+    })
 
     const e2eValues = rows.map(r => r.result.e2e_latency_ms ?? 0)
     const maxE2E = Math.max(...e2eValues)
-    const minE2E = Math.min(...e2eValues)
+    const minE2E = Math.min(...e2eValues.filter(v => v > 0))
 
     const vramValues = rows.map(r => r.result.gpu_memory_used_mb ?? 0)
     const maxVRAM = Math.max(...vramValues)
@@ -41,18 +59,21 @@ export default function Charts({ rows }: { rows: ChartRow[] }) {
         <div className="space-y-5 font-mono text-xs">
             {/* Latency breakdown */}
             <div>
-                <div className="text-muted-foreground font-bold uppercase tracking-wider mb-2">
-                    Latency Breakdown
+                <div className="flex items-center justify-between mb-2">
+                    <span className="text-muted-foreground font-bold uppercase tracking-wider">
+                        Latency Breakdown
+                    </span>
+                    <SortToggle dir={latencySort} onToggle={() => setLatencySort(d => d === "asc" ? "desc" : "asc")} />
                 </div>
                 <div className="space-y-1.5">
-                    {rows.map(r => {
+                    {latencyRows.map(r => {
                         const ttft = r.result.ttft_ms ?? 0
                         const e2e = r.result.e2e_latency_ms ?? 0
                         const decode = Math.max(0, e2e - ttft)
                         const ttftPct = maxE2E > 0 ? (ttft / maxE2E) * 100 : 0
                         const decodePct = maxE2E > 0 ? (decode / maxE2E) * 100 : 0
-                        const isFastest = e2e === minE2E && rows.length > 1
-                        const isSlowest = e2e === maxE2E && rows.length > 1
+                        const isFastest = e2e > 0 && e2e === minE2E && rows.length > 1
+                        const isSlowest = e2e > 0 && e2e === maxE2E && rows.length > 1
 
                         return (
                             <BarRow key={r.name} label={r.name}>
@@ -87,11 +108,14 @@ export default function Charts({ rows }: { rows: ChartRow[] }) {
 
             {/* Resource usage */}
             <div>
-                <div className="text-muted-foreground font-bold uppercase tracking-wider mb-2">
-                    Resource Usage
+                <div className="flex items-center justify-between mb-2">
+                    <span className="text-muted-foreground font-bold uppercase tracking-wider">
+                        Resource Usage
+                    </span>
+                    <SortToggle dir={resourceSort} onToggle={() => setResourceSort(d => d === "asc" ? "desc" : "asc")} />
                 </div>
                 <div className="space-y-1.5">
-                    {rows.map(r => {
+                    {resourceRows.map(r => {
                         const vram = r.result.gpu_memory_used_mb ?? 0
                         const gpu = r.result.gpu_utilization_pct ?? 0
                         const vramPct = maxVRAM > 0 ? (vram / maxVRAM) * 100 : 0
@@ -130,6 +154,14 @@ export default function Charts({ rows }: { rows: ChartRow[] }) {
                 ]} />
             </div>
         </div>
+    )
+}
+
+function SortToggle({ dir, onToggle }: { dir: SortDir; onToggle: () => void }) {
+    return (
+        <button onClick={onToggle} className="text-muted-foreground hover:text-foreground cursor-pointer text-[10px]">
+            {dir === "asc" ? "▲ asc" : "▼ desc"}
+        </button>
     )
 }
 
