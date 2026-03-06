@@ -125,10 +125,9 @@ async def inference_ws(websocket: WebSocket, session_id: int):
     3. Verify JWT → get user_id (close 4001 if invalid)
     4. Load session from DB, verify ownership (close 4004 if not found / not owner)
     5. For each pending result: asyncio.create_task → call Modal → push result via WS
-    6. asyncio.gather all tasks
+    6. Listen for cancel messages while tasks run
     7. Send {"type": "session_complete"}, close connection
-
-    Why no Depends(get_current_user) here:
+        Why no Depends(get_current_user) here:
     WebSocket has no HTTP headers after the handshake. HTTPBearer reads the
     Authorization header, which doesn't exist on a WS frame. So we authenticate
     manually via the first message, then call decode_jwt() directly (same function
@@ -155,8 +154,6 @@ async def inference_ws(websocket: WebSocket, session_id: int):
         return
 
     # 2. Load session + verify ownership
-    # WebSocket can't use Depends(), so we call get_session(websocket) directly
-    # same function, same engine from app.state — just called manually instead of injected
     async for session in get_session(websocket):
         inf_session = await session.get(InferenceSession, session_id)
         if not inf_session or inf_session.user_id != user_id:
@@ -171,28 +168,45 @@ async def inference_ws(websocket: WebSocket, session_id: int):
         results = db_res.scalars().all()
 
         # 3. Run Modal inference concurrently
-        # Create coroutine objects(define the tasks), NOT calling(starting) functions yet
         tasks = [
-            run_modal_inference(
-                result_id=r.id,
-                model_id=r.model_id,
-                prompt=inf_session.prompt,
-                gpu_tier=inf_session.gpu_tier,
-                websocket=websocket,
-                engine=websocket.app.state.engine,
+            asyncio.create_task(
+                run_modal_inference(
+                    result_id=r.id,
+                    model_id=r.model_id,
+                    prompt=inf_session.prompt,
+                    gpu_tier=inf_session.gpu_tier,
+                    websocket=websocket,
+                    engine=websocket.app.state.engine,
+                )
             )
             for r in results
         ]
 
+        # 4. Listen for cancel while tasks run
+        async def listen_for_cancel():
+            try:
+                while True:
+                    data = await websocket.receive_json()
+                    if data.get("type") == "cancel":
+                        for t in tasks:
+                            t.cancel()
+                        return
+            except (WebSocketDisconnect, Exception):
+                return
+
+        cancel_listener = asyncio.create_task(listen_for_cancel())
+
         try:
-            # gather takes N coroutines, (Actual start, calls functions)starts all, returns when all are finished
-            # similar to join() in threads, each coro call HTTP -> Modal -> Network I/O
-            # 1. submits all coroutines to the event loop, starts them
-            # 2. waits until ALL of them finished(join())
             await asyncio.gather(*tasks)
         except WebSocketDisconnect:
+            cancel_listener.cancel()
             return
 
-        # 4. Done
-        await websocket.send_json({"type": "session_complete"})
-        await websocket.close()
+        cancel_listener.cancel()
+
+        # 5. Done
+        try:
+            await websocket.send_json({"type": "session_complete"})
+            await websocket.close()
+        except Exception:
+            pass

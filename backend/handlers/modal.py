@@ -25,6 +25,9 @@ GPU_CLASS_MAP = {
     "h100": "ModelH100",
 }
 
+# Per-chunk timeout: if Modal doesn't yield a chunk within this many seconds, abort
+CHUNK_TIMEOUT_SECONDS = 180
+
 
 async def run_modal_inference(
     result_id: int,
@@ -83,7 +86,7 @@ async def run_modal_inference(
 
             # Consume streaming generator via run_in_executor
             gen = model_instance.generate_stream.remote_gen(
-                prompt=prompt, max_tokens=512, temperature=0.7
+                prompt=prompt, max_tokens=2048, temperature=0.7
             )
             loop = asyncio.get_event_loop()
 
@@ -106,7 +109,11 @@ async def run_modal_inference(
 
             try:
                 while True:
-                    chunk = await loop.run_in_executor(None, lambda: next(gen, None))
+                    # Timeout per chunk — if Modal hangs, we abort
+                    chunk = await asyncio.wait_for(
+                        loop.run_in_executor(None, lambda: next(gen, None)),
+                        timeout=CHUNK_TIMEOUT_SECONDS,
+                    )
                     if chunk is None:
                         break
 
@@ -161,8 +168,35 @@ async def run_modal_inference(
                         for key, value in metrics.items():
                             setattr(result, key, value)
                         await db_session.commit()
+
+            except asyncio.TimeoutError:
+                logger.error(f"Modal inference timed out for model {model_id} after {CHUNK_TIMEOUT_SECONDS}s")
+                await websocket.send_json({
+                    "type": "model_error",
+                    "model_id": model_id,
+                    "model_name": model.name,
+                    "message": f"Inference timed out after {CHUNK_TIMEOUT_SECONDS}s",
+                })
+                await db_session.refresh(result)
+                result.status = "failed"
+                result.response_text = f"Timed out after {CHUNK_TIMEOUT_SECONDS}s"
+                await db_session.commit()
             finally:
                 heartbeat_task.cancel()
+
+        except asyncio.CancelledError:
+            # Task was cancelled (user pressed Stop)
+            logger.info(f"Inference cancelled for model {model_id}")
+            await websocket.send_json({
+                "type": "model_error",
+                "model_id": model_id,
+                "model_name": model.name,
+                "message": "Cancelled by user",
+            })
+            await db_session.refresh(result)
+            result.status = "failed"
+            result.response_text = "Cancelled by user"
+            await db_session.commit()
 
         except Exception as e:
             logger.error(f"Modal inference failed for model {model_id}: {e}")
