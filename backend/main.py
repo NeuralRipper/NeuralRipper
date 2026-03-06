@@ -1,9 +1,15 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from sqlalchemy import text
 
 from db.connection import start_engine
 from db.base import Base
+from scripts.seed_models import seed_models
+
+logger = logging.getLogger(__name__)
 
 from routes.auth import router as auth_router
 from routes.inference import router as infer_router
@@ -22,6 +28,20 @@ async def lifespan(app: FastAPI):
     # create all tables if they don't exist (replaces init.sql)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    # migrate: add new columns to existing tables (idempotent)
+    async with engine.begin() as conn:
+        for stmt in [
+            "ALTER TABLE models ADD COLUMN vram_gb INT NULL",
+            "ALTER TABLE inference_sessions ADD COLUMN gpu_tier VARCHAR(10) DEFAULT 'a10g'",
+        ]:
+            try:
+                await conn.execute(text(stmt))
+            except Exception:
+                pass  # column already exists
+
+    # seed curated models (idempotent — skips existing)
+    await seed_models(engine)
 
     yield
     await engine.dispose()

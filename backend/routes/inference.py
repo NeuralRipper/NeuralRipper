@@ -43,7 +43,7 @@ async def create_inference(
     Frontend flow: POST here → get session_id → open WebSocket → Modal runs there.
     """
     inf_session = InferenceSession(
-        user_id=user_id, prompt=body.prompt, model_ids=body.model_ids
+        user_id=user_id, prompt=body.prompt, model_ids=body.model_ids, gpu_tier=body.gpu_tier
     )
     session.add(inf_session)
     await session.commit()
@@ -80,6 +80,7 @@ async def list_sessions(session: AsyncSession = Depends(get_session)):
             user_avatar=row.avatar_url,
             prompt=row.InferenceSession.prompt,
             model_ids=row.InferenceSession.model_ids,
+            gpu_tier=row.InferenceSession.gpu_tier,
             created_at=row.InferenceSession.created_at,
         )
         for row in rows
@@ -176,6 +177,7 @@ async def inference_ws(websocket: WebSocket, session_id: int):
                 result_id=r.id,
                 model_id=r.model_id,
                 prompt=inf_session.prompt,
+                gpu_tier=inf_session.gpu_tier,
                 websocket=websocket,
                 engine=websocket.app.state.engine,
             )

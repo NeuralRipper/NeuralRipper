@@ -6,6 +6,7 @@ class InferenceCreate(BaseModel):
     """Client sends a prompt to create 1~N new inferences"""
     prompt: str
     model_ids: list[int]
+    gpu_tier: str = "a10g"
 
 
 class InferenceCreateResponse(BaseModel):
@@ -44,6 +45,7 @@ class SessionListResponse(BaseModel):
     user_avatar: str | None
     prompt: str
     model_ids: list[int]
+    gpu_tier: str
     created_at: datetime
 
 

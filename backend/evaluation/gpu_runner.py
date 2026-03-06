@@ -1,6 +1,7 @@
 """
 Modal App definition — runs on Modal's GPU cloud
-Defines the vLLM inference server that our backend calls remotely
+Defines vLLM inference classes with real token streaming + 4 GPU tiers.
+Deploy: cd backend && uv run modal deploy evaluation/gpu_runner.py
 """
 
 import modal
@@ -17,68 +18,144 @@ app = modal.App("neuralripper-inference")
 hf_cache_vol = modal.Volume.from_name("hf-cache", create_if_missing=True)
 vllm_cache_vol = modal.Volume.from_name("vllm-cache", create_if_missing=True)
 
+VOLUMES = {
+    "/root/.cache/huggingface": hf_cache_vol,
+    "/root/.cache/vllm": vllm_cache_vol,
+}
 
-@app.function(
-    image=vllm_image,
-    gpu="T4",
-    timeout=5 * 60,
-    volumes={
-        "/root/.cache/huggingface": hf_cache_vol,
-        "/root/.cache/vllm": vllm_cache_vol,
-    },
-)
-def run_inference(hf_model_id: str, prompt: str, max_tokens: int = 512) -> dict:
-    """
-    Runs on Modal GPU. Called remotely from our backend via .remote()
-    Returns dict with response text, latency metrics, token counts, and GPU stats.
-    """
-    from vllm import LLM, SamplingParams
-    import pynvml
 
-    # GPU snapshot before inference
-    pynvml.nvmlInit()
-    handle = pynvml.nvmlDeviceGetHandleByIndex(0)
-    gpu_name = pynvml.nvmlDeviceGetName(handle)
-    gpu_memory_total_mb = round(pynvml.nvmlDeviceGetMemoryInfo(handle).total / 1024 / 1024)
+def _make_gpu_cls(gpu: str):
+    """Factory: creates a Modal class for a specific GPU tier with full vLLM streaming."""
 
-    start = time.perf_counter()
+    class ModalClass:
+        model_name: str = modal.parameter()
 
-    llm = LLM(model=hf_model_id)
-    sampling_params = SamplingParams(max_tokens=max_tokens, temperature=0.7)
+        @modal.enter()
+        async def load_model(self):
+            """Load model once when container starts (cold start)."""
+            from vllm.engine.arg_utils import AsyncEngineArgs
+            from vllm.engine.async_llm_engine import AsyncLLMEngine
+            import pynvml
 
-    ttft_start = time.perf_counter()
-    outputs = llm.generate([prompt], sampling_params)
-    end = time.perf_counter()
+            pynvml.nvmlInit()
+            handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+            self._gpu_name = pynvml.nvmlDeviceGetName(handle)
+            self._gpu_memory_total_mb = round(
+                pynvml.nvmlDeviceGetMemoryInfo(handle).total / 1024 / 1024
+            )
+            pynvml.nvmlShutdown()
 
-    # GPU snapshot after inference
-    util = pynvml.nvmlDeviceGetUtilizationRates(handle)
-    mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
-    pynvml.nvmlShutdown()
+            engine_args = AsyncEngineArgs(
+                model=self.model_name,
+                gpu_memory_utilization=0.9,
+                max_model_len=4096,
+                trust_remote_code=True,
+            )
+            self.engine = AsyncLLMEngine.from_engine_args(engine_args)
 
-    result = outputs[0]
-    output = result.outputs[0]
-    prompt_tokens = len(result.prompt_token_ids)
-    completion_tokens = len(output.token_ids)
+        @modal.method()
+        async def generate_stream(
+            self, prompt: str, max_tokens: int = 512, temperature: float = 0.7
+        ):
+            """
+            Async generator yielding structured chunks:
+              1. {"stage": "generating"}          — model loaded, starting inference
+              2. {"stage": "token", "delta": ...} — each new token
+              3. {"stage": "complete", "metrics": {...}} — final metrics + GPU stats
+            """
+            from vllm import SamplingParams
+            import pynvml
+            import uuid
 
-    e2e_ms = (end - start) * 1000
-    ttft_ms = (end - ttft_start) * 1000
-    tpot_ms = e2e_ms / completion_tokens if completion_tokens > 0 else 0
+            yield {"stage": "generating"}
 
-    return {
-        "response_text": output.text,
-        "finish_reason": output.finish_reason,
-        # token counts
-        "prompt_tokens": prompt_tokens,
-        "completion_tokens": completion_tokens,
-        "total_tokens": prompt_tokens + completion_tokens,
-        # latency
-        "ttft_ms": round(ttft_ms, 2),
-        "tpot_ms": round(tpot_ms, 2),
-        "tokens_per_second": round(completion_tokens / (e2e_ms / 1000), 2) if e2e_ms > 0 else 0,
-        "e2e_latency_ms": round(e2e_ms, 2),
-        # GPU
-        "gpu_name": gpu_name,
-        "gpu_utilization_pct": util.gpu,
-        "gpu_memory_used_mb": round(mem_info.used / 1024 / 1024),
-        "gpu_memory_total_mb": gpu_memory_total_mb,
-    }
+            sampling_params = SamplingParams(
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+
+            request_id = str(uuid.uuid4())
+            start = time.perf_counter()
+            ttft = None
+            previous_text = ""
+            prompt_tokens = 0
+            completion_tokens = 0
+            finish_reason = "unknown"
+
+            async for output in self.engine.generate(
+                request_id=request_id,
+                prompt=prompt,
+                sampling_params=sampling_params,
+            ):
+                current_text = output.outputs[0].text
+                delta = current_text[len(previous_text):]
+                if delta:
+                    if ttft is None:
+                        ttft = time.perf_counter() - start
+                    yield {"stage": "token", "delta": delta}
+                previous_text = current_text
+
+                if output.finished:
+                    if hasattr(output, "prompt_token_ids") and output.prompt_token_ids:
+                        prompt_tokens = len(output.prompt_token_ids)
+                    completion_tokens = len(output.outputs[0].token_ids)
+                    finish_reason = output.outputs[0].finish_reason or "unknown"
+
+            end = time.perf_counter()
+
+            # GPU snapshot after generation
+            pynvml.nvmlInit()
+            handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+            util = pynvml.nvmlDeviceGetUtilizationRates(handle)
+            mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+            pynvml.nvmlShutdown()
+
+            e2e_ms = (end - start) * 1000
+            ttft_ms = (ttft or 0) * 1000
+            tpot_ms = (
+                (e2e_ms - ttft_ms) / (completion_tokens - 1)
+                if completion_tokens > 1
+                else 0
+            )
+
+            yield {
+                "stage": "complete",
+                "metrics": {
+                    "response_text": previous_text,
+                    "finish_reason": finish_reason,
+                    "prompt_tokens": prompt_tokens,
+                    "completion_tokens": completion_tokens,
+                    "total_tokens": prompt_tokens + completion_tokens,
+                    "ttft_ms": round(ttft_ms, 2),
+                    "tpot_ms": round(tpot_ms, 2),
+                    "tokens_per_second": (
+                        round(completion_tokens / (e2e_ms / 1000), 2)
+                        if e2e_ms > 0
+                        else 0
+                    ),
+                    "e2e_latency_ms": round(e2e_ms, 2),
+                    "gpu_name": self._gpu_name,
+                    "gpu_utilization_pct": util.gpu,
+                    "gpu_memory_used_mb": round(mem_info.used / 1024 / 1024),
+                    "gpu_memory_total_mb": self._gpu_memory_total_mb,
+                },
+            }
+
+    # Set class name BEFORE app.cls registers it
+    ModalClass.__name__ = f"Model{gpu}"
+    ModalClass.__qualname__ = f"Model{gpu}"
+
+    return app.cls(
+        gpu=gpu,
+        image=vllm_image,
+        scaledown_window=900,
+        volumes=VOLUMES,
+        secrets=[modal.Secret.from_name("huggingface")],
+        timeout=5 * 60,
+    )(ModalClass)
+
+
+ModelT4 = _make_gpu_cls("T4")
+ModelA10G = _make_gpu_cls("A10G")
+ModelA100 = _make_gpu_cls("A100")
+ModelH100 = _make_gpu_cls("H100")

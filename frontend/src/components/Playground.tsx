@@ -11,11 +11,21 @@ import Charts from "./Charts"
 import EXAMPLE_RESULTS from "./ExampleResults"
 
 
+const GPU_TIERS = [
+  { id: "t4", label: "T4", vram: 16 },
+  { id: "a10g", label: "A10G", vram: 24 },
+  { id: "a100", label: "A100", vram: 40 },
+  { id: "h100", label: "H100", vram: 80 },
+] as const
+
+const GPU_VRAM: Record<string, number> = { t4: 16, a10g: 24, a100: 40, h100: 80 }
+
 export default function Playground() {
   const { user, loading, login, logout } = useAuth()
   const [models, setModels] = useState<ModelResponse[]>([])
   const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [prompt, setPrompt] = useState("")
+  const [gpuTier, setGpuTier] = useState("a10g")
   const [sessionId, setSessionId] = useState<number | null>(null)
   const [submittedPrompt, setSubmittedPrompt] = useState<string | null>(null)
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false)
@@ -44,7 +54,7 @@ export default function Playground() {
   const submit = async () => {
     if (!user || !prompt.trim() || selectedIds.length === 0) return
     setSubmittedPrompt(prompt)
-    const res = await createSession({ prompt, model_ids: selectedIds })
+    const res = await createSession({ prompt, model_ids: selectedIds, gpu_tier: gpuTier })
     setSessionId(res.session_id)
   }
 
@@ -99,18 +109,37 @@ export default function Playground() {
             {/* Model select dropdown */}
             <div className="border-b border-border p-3 text-sm" ref={dropdownRef}>
               <div className="relative">
-                <button
-                  onClick={() => setModelDropdownOpen(prev => !prev)}
-                  disabled={running}
-                  className="flex items-center gap-2 text-cyan-400 hover:text-cyan-300 disabled:opacity-50 cursor-pointer"
-                >
-                  <span className="text-muted-foreground">[</span>
-                  {selectedIds.length === 0
-                    ? "Select Models"
-                    : `${selectedIds.length} model${selectedIds.length > 1 ? "s" : ""} selected`}
-                  <span className="text-muted-foreground">]</span>
-                  <span className="text-xs text-muted-foreground">{modelDropdownOpen ? "▲" : "▼"}</span>
-                </button>
+                <div className="flex items-center">
+                  <button
+                    onClick={() => setModelDropdownOpen(prev => !prev)}
+                    disabled={running}
+                    className="flex items-center gap-2 text-cyan-400 hover:text-cyan-300 disabled:opacity-50 cursor-pointer"
+                  >
+                    <span className="text-muted-foreground">[</span>
+                    {selectedIds.length === 0
+                      ? "Select Models"
+                      : `${selectedIds.length} model${selectedIds.length > 1 ? "s" : ""} selected`}
+                    <span className="text-muted-foreground">]</span>
+                    <span className="text-xs text-muted-foreground">{modelDropdownOpen ? "▲" : "▼"}</span>
+                  </button>
+                  <div className="flex items-center gap-1.5 ml-auto">
+                    {GPU_TIERS.map(g => (
+                      <button
+                        key={g.id}
+                        onClick={() => setGpuTier(g.id)}
+                        disabled={running}
+                        className={`px-2 py-0.5 text-xs border cursor-pointer ${
+                          gpuTier === g.id
+                            ? "border-cyan-400 text-cyan-400 bg-cyan-400/10"
+                            : "border-border text-muted-foreground hover:text-foreground"
+                        } disabled:opacity-50`}
+                      >
+                        {g.label}
+                        <span className="text-muted-foreground ml-1">{g.vram}G</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 {modelDropdownOpen && (
                   <div className="absolute top-full left-0 mt-1 z-20 border border-border bg-card min-w-56 py-1">
                     {models.map(m => (
@@ -137,6 +166,9 @@ export default function Playground() {
                           {m.name}
                         </span>
                         <span className="text-xs text-muted-foreground ml-auto">{m.quantization}</span>
+                        {m.vram_gb != null && m.vram_gb > GPU_VRAM[gpuTier] && (
+                          <span className="text-red-400 text-xs font-bold">OOM</span>
+                        )}
                       </label>
                     ))}
                   </div>

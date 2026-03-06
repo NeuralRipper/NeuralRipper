@@ -24,6 +24,7 @@ export interface ModelResponse {
   quantization: string
   description: string | null
   is_downloaded: boolean
+  vram_gb: number | null
   created_at: string
 }
 
@@ -31,6 +32,7 @@ export interface ModelResponse {
 export interface InferenceCreate {
   prompt: string
   model_ids: number[]
+  gpu_tier?: string
 }
 
 export interface InferenceCreateResponse {
@@ -66,6 +68,7 @@ export interface SessionListResponse {
   user_avatar: string | null
   prompt: string
   model_ids: number[]
+  gpu_tier: string
   created_at: string
 }
 
@@ -75,9 +78,10 @@ export interface SessionDetailResponse extends SessionListResponse {
 
 // WebSocket message (server -> client), single flat type with optional fields per msg type
 export interface WsMessage {
-  type: "model_start" | "model_complete" | "model_error" | "session_complete" | "error"
+  type: "model_start" | "model_loading" | "token" | "model_complete" | "model_error" | "session_complete" | "error"
   model_id?: number
   model_name?: string
   result?: InferenceResultResponse
   message?: string
+  delta?: string
 }

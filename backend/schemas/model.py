@@ -11,5 +11,6 @@ class ModelResponse(BaseModel):
     quantization: str
     description: str | None
     is_downloaded: bool
+    vram_gb: int | None
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)

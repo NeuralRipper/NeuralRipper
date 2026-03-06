@@ -32,6 +32,23 @@ export function useInferenceSocket(sessionId: number | null) {
             })
           )
           break
+        case "model_loading":
+          setInferenceResults(prev => {
+            const existing = prev.get(msg.model_id!)
+            return new Map(prev).set(msg.model_id!, { ...existing!, status: "streaming" })
+          })
+          break
+        case "token":
+          setInferenceResults(prev => {
+            const existing = prev.get(msg.model_id!)
+            if (!existing) return prev
+            return new Map(prev).set(msg.model_id!, {
+              ...existing,
+              status: "streaming",
+              response_text: (existing.response_text ?? "") + (msg.delta ?? ""),
+            })
+          })
+          break
         case "model_complete":
           setInferenceResults(prev =>
             new Map(prev).set(msg.model_id!, msg.result!)
