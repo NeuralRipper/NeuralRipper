@@ -122,7 +122,7 @@ def _make_gpu_cls(gpu: str):
 
         @modal.method()
         async def generate_stream(
-            self, prompt: str, max_tokens: int = 2048, temperature: float = 0.7
+            self, prompt: str, max_tokens: int = 1024, temperature: float = 0.7
         ):
             """
             Async generator yielding structured chunks (same interface as before):
@@ -153,6 +153,8 @@ def _make_gpu_cls(gpu: str):
                 "prompt": prompt,
                 "max_tokens": max_tokens,
                 "temperature": temperature,
+                "repetition_penalty": 1.1,
+                "frequency_penalty": 0.3,
                 "stream": True,
                 "stream_options": {"include_usage": True},
             }
@@ -175,14 +177,16 @@ def _make_gpu_cls(gpu: str):
                             except json.JSONDecodeError:
                                 continue
 
-                            # Usage-only final chunk
-                            if "usage" in chunk and chunk.get("choices", [{}])[0].get("text", "") == "":
-                                usage = chunk["usage"]
-                                prompt_tokens = usage.get("prompt_tokens", prompt_tokens)
-                                token_count = usage.get("completion_tokens", token_count)
+                            # Extract choices once — usage-only chunks have choices=[]
+                            choices = chunk.get("choices", [])
+                            if not choices:
+                                if "usage" in chunk:
+                                    usage = chunk["usage"]
+                                    prompt_tokens = usage.get("prompt_tokens", prompt_tokens)
+                                    token_count = usage.get("completion_tokens", token_count)
                                 continue
 
-                            choice = chunk.get("choices", [{}])[0]
+                            choice = choices[0]
                             delta = choice.get("text", "")
 
                             if delta:

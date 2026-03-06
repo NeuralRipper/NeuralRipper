@@ -3,14 +3,14 @@ import { GoogleLogin } from "@react-oauth/google"
 import { useAuth } from "@/hooks/useAuth"
 import { useInferenceSocket } from "@/hooks/useInferenceSocket"
 import { listModels } from "@/api/models"
-import { createSession, getSessionDetail } from "@/api/inference"
+import { createSession, getLatestSession } from "@/api/inference"
 import type { ModelResponse, InferenceResultResponse } from "@/types"
 import PromptCard from "./PromptCard"
 import MetricsTable from "./MetricsTable"
 import Charts from "./Charts"
 import EXAMPLE_RESULTS from "./ExampleResults"
 
-const SESSION_KEY = "nr_session_id"
+
 
 const MAX_MODELS = 5
 
@@ -40,42 +40,25 @@ export default function Playground() {
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false)
   const [recoveredResults, setRecoveredResults] = useState<Map<number, InferenceResultResponse> | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const { inferenceResults, isComplete, error, cancel } = useInferenceSocket(sessionId)
+  const { inferenceResults, isComplete, error, cancel, resetSocket } = useInferenceSocket(sessionId)
 
   useEffect(() => { listModels().then(setModels).catch(console.error) }, [])
 
-  // Recover session from sessionStorage on mount
+  // Recover last session from DB on mount (when user is available)
   useEffect(() => {
-    const stored = sessionStorage.getItem(SESSION_KEY)
-    if (!stored) return
-    const id = parseInt(stored, 10)
-    if (isNaN(id)) return
-
-    getSessionDetail(id).then(detail => {
+    if (!user) return
+    getLatestSession().then(detail => {
+      if (!detail) return
       setSubmittedPrompt(detail.prompt)
       const map = new Map<number, InferenceResultResponse>()
       for (const r of detail.results) {
         map.set(r.model_id, r)
       }
       setRecoveredResults(map)
-    }).catch(() => {
-      sessionStorage.removeItem(SESSION_KEY)
-    })
-  }, [])
+    }).catch(() => { /* no session to recover */ })
+  }, [user])
 
-  // Persist sessionId to sessionStorage
-  useEffect(() => {
-    if (sessionId) {
-      sessionStorage.setItem(SESSION_KEY, String(sessionId))
-    }
-  }, [sessionId])
 
-  // Clear sessionStorage when session completes
-  useEffect(() => {
-    if (isComplete && sessionId) {
-      sessionStorage.removeItem(SESSION_KEY)
-    }
-  }, [isComplete, sessionId])
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -111,10 +94,10 @@ export default function Playground() {
 
   const reset = () => {
     if (running) cancel()
+    resetSocket()
     setSessionId(null)
     setSubmittedPrompt(null)
     setRecoveredResults(null)
-    sessionStorage.removeItem(SESSION_KEY)
   }
 
   const running = sessionId !== null && !isComplete
@@ -190,11 +173,10 @@ export default function Playground() {
                         key={g.id}
                         onClick={() => setGpuTier(g.id)}
                         disabled={running}
-                        className={`px-2 py-0.5 text-xs border cursor-pointer ${
-                          gpuTier === g.id
+                        className={`px-2 py-0.5 text-xs border cursor-pointer ${gpuTier === g.id
                             ? "border-cyan-400 text-cyan-400 bg-cyan-400/10"
                             : "border-border text-muted-foreground hover:text-foreground"
-                        } disabled:opacity-50`}
+                          } disabled:opacity-50`}
                       >
                         {g.label}
                         <span className="text-muted-foreground ml-1">{g.vram}G</span>
@@ -213,16 +195,14 @@ export default function Playground() {
                       return (
                         <label
                           key={m.id}
-                          className={`flex items-center gap-3 px-3 py-1.5 select-none ${
-                            blocked ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:bg-muted/30"
-                          }`}
+                          className={`flex items-center gap-3 px-3 py-1.5 select-none ${blocked ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:bg-muted/30"
+                            }`}
                         >
                           <span
-                            className={`w-4 h-4 border flex items-center justify-center text-xs ${
-                              selectedIds.includes(m.id)
+                            className={`w-4 h-4 border flex items-center justify-center text-xs ${selectedIds.includes(m.id)
                                 ? "border-cyan-400 bg-cyan-400/20 text-cyan-400"
                                 : "border-muted-foreground text-transparent"
-                            }`}
+                              }`}
                           >
                             ✓
                           </span>

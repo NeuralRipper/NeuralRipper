@@ -16,17 +16,17 @@ export default function PromptCard({ result, name, streaming }: {
     const done = result.status === "completed"
 
     const statusText =
-        done ? `completed${result.finish_reason ? ` (${result.finish_reason})` : ""}`
-        : result.status === "failed" ? "failed"
-        : result.status === "cold_start" ? `cold start (${result.cold_start_elapsed ?? 0}s)`
-        : result.response_text ? "streaming..."
-        : result.status === "streaming" ? "loading model..."
-        : "starting..."
+        done ? "completed"
+            : result.status === "failed" ? "failed"
+                : result.status === "cold_start" ? `cold start (${result.cold_start_elapsed ?? 0}s)`
+                    : result.response_text ? "streaming..."
+                        : result.status === "streaming" ? "loading model..."
+                            : "starting..."
 
     const statusColor =
         done ? "text-green-400"
-        : result.status === "failed" ? "text-red-400"
-        : "text-yellow-400"
+            : result.status === "failed" ? "text-red-400"
+                : "text-yellow-400"
 
     return (
         <div className="border border-border bg-card p-3 flex flex-col h-full min-h-0">
@@ -43,7 +43,7 @@ export default function PromptCard({ result, name, streaming }: {
                         {result.status === "cold_start"
                             ? `cold starting container... (${result.cold_start_elapsed ?? 0}s)`
                             : result.status === "streaming" ? "loading model..."
-                            : "waiting for response..."}
+                                : "waiting for response..."}
                     </span>
                 )}
                 {streaming && result.response_text && <span className="animate-pulse">|</span>}

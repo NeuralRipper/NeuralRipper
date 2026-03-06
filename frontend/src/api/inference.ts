@@ -24,6 +24,11 @@ export async function getSessionDetail(sessionId: number): Promise<SessionDetail
   return request<SessionDetailResponse>(`/inference/sessions/${sessionId}`)
 }
 
+// GET /inference/sessions/latest   Recover last session for current user
+export async function getLatestSession(): Promise<SessionDetailResponse | null> {
+  return request<SessionDetailResponse | null>("/inference/sessions/latest")
+}
+
 // WebSocket  Connect and authenticate in one step
 // Returns the socket so the hook can attach onmessage/onclose handlers
 export function connectInferenceSocket(sessionId: number): WebSocket {

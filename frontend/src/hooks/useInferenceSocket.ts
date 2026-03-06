@@ -17,6 +17,17 @@ export function useInferenceSocket(sessionId: number | null) {
     setIsComplete(true)
   }
 
+  const resetSocket = () => {
+    if (wsRef.current) {
+      wsRef.current.close()
+      wsRef.current = null
+    }
+    setInferenceResults(new Map())
+    setIsComplete(false)
+    setError(null)
+    timingRef.current = new Map()
+  }
+
   useEffect(() => {
     if (!sessionId) return
 
@@ -134,5 +145,5 @@ export function useInferenceSocket(sessionId: number | null) {
     }
   }, [sessionId])
 
-  return { inferenceResults, isComplete, error, cancel }
+  return { inferenceResults, isComplete, error, cancel, resetSocket }
 }

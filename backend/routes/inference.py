@@ -87,6 +87,39 @@ async def list_sessions(session: AsyncSession = Depends(get_session)):
     ]
 
 
+@router.get("/sessions/latest", response_model=SessionDetailResponse | None)
+async def get_latest_session(
+    session: AsyncSession = Depends(get_session),
+    user_id: int = Depends(get_current_user),
+):
+    """Return the user's most recent session with results, or null if none."""
+    result = await session.execute(
+        select(InferenceSession)
+        .where(InferenceSession.user_id == user_id)
+        .order_by(InferenceSession.created_at.desc())
+        .limit(1)
+    )
+    inf_session = result.scalar_one_or_none()
+    if not inf_session:
+        return None
+
+    user = await session.get(User, inf_session.user_id)
+    db_res = await session.execute(
+        select(InferenceResult).where(InferenceResult.session_id == inf_session.id)
+    )
+    results = db_res.scalars().all()
+
+    return SessionDetailResponse(
+        id=inf_session.id,
+        user_name=user.name if user else None,
+        user_avatar=user.avatar_url if user else None,
+        prompt=inf_session.prompt,
+        model_ids=inf_session.model_ids,
+        created_at=inf_session.created_at,
+        results=[InferenceResultResponse.model_validate(r) for r in results],
+    )
+
+
 @router.get("/sessions/{session_id}", response_model=SessionDetailResponse)
 async def get_session_detail(
     session_id: int,

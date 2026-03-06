@@ -8,6 +8,7 @@ Flow: WebSocket orchestrates → Modal streams tokens → push to WS + save to D
 import asyncio
 import logging
 import time
+import traceback
 
 from fastapi import WebSocket
 from sqlalchemy import select
@@ -26,7 +27,7 @@ GPU_CLASS_MAP = {
 }
 
 # Per-chunk timeout: if Modal doesn't yield a chunk within this many seconds, abort
-CHUNK_TIMEOUT_SECONDS = 180
+CHUNK_TIMEOUT_SECONDS = 300
 
 
 async def run_modal_inference(
@@ -76,6 +77,7 @@ async def run_modal_inference(
         result.status = "streaming"
         await db_session.commit()
 
+        gen = None
         try:
             import modal
 
@@ -86,9 +88,10 @@ async def run_modal_inference(
 
             # Consume streaming generator via run_in_executor
             gen = model_instance.generate_stream.remote_gen(
-                prompt=prompt, max_tokens=2048, temperature=0.7
+                prompt=prompt, max_tokens=1024, temperature=0.7
             )
             loop = asyncio.get_event_loop()
+            completed_ok = False
 
             # Cold-start heartbeat: send progress while waiting for first chunk
             first_chunk = asyncio.Event()
@@ -163,13 +166,22 @@ async def run_modal_inference(
                         })
 
                         # Save to DB (for Results tab history)
-                        await db_session.refresh(result)
-                        result.status = "completed"
-                        for key, value in metrics.items():
-                            setattr(result, key, value)
-                        await db_session.commit()
+                        try:
+                            await db_session.refresh(result)
+                            result.status = "completed"
+                            for key, value in metrics.items():
+                                setattr(result, key, value)
+                            await db_session.commit()
+                        except Exception as db_err:
+                            logger.error(f"DB commit failed after model {model_id} completed: {db_err}")
+                        completed_ok = True
 
             except asyncio.TimeoutError:
+                if gen is not None:
+                    try:
+                        gen.close()
+                    except Exception:
+                        pass
                 logger.error(f"Modal inference timed out for model {model_id} after {CHUNK_TIMEOUT_SECONDS}s")
                 await websocket.send_json({
                     "type": "model_error",
@@ -185,7 +197,12 @@ async def run_modal_inference(
                 heartbeat_task.cancel()
 
         except asyncio.CancelledError:
-            # Task was cancelled (user pressed Stop)
+            # Task was cancelled (user pressed Stop) — close remote generator
+            if gen is not None:
+                try:
+                    gen.close()
+                except Exception:
+                    pass
             logger.info(f"Inference cancelled for model {model_id}")
             await websocket.send_json({
                 "type": "model_error",
@@ -199,7 +216,15 @@ async def run_modal_inference(
             await db_session.commit()
 
         except Exception as e:
-            logger.error(f"Modal inference failed for model {model_id}: {e}")
+            if completed_ok:
+                logger.warning(f"Post-completion error for model {model_id} (ignoring): {e}")
+                return
+            if gen is not None:
+                try:
+                    gen.close()
+                except Exception:
+                    pass
+            logger.error(f"Modal inference failed for model {model_id}: {e}\n{traceback.format_exc()}")
             await websocket.send_json({
                 "type": "model_error",
                 "model_id": model_id,
