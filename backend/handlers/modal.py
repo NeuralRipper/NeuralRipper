@@ -7,6 +7,7 @@ Flow: WebSocket orchestrates → Modal streams tokens → push to WS + save to D
 
 import asyncio
 import logging
+import time
 
 from fastapi import WebSocket
 from sqlalchemy import select
@@ -37,7 +38,7 @@ async def run_modal_inference(
     1. Look up model's hf_model_id from DB
     2. Push model_start to WebSocket
     3. Stream from Modal's generate_stream (runs on GPU)
-    4. Push token/model_loading/model_complete (or model_error) to WebSocket
+    4. Push token/metrics_update/model_complete (or model_error) to WebSocket
     5. Save final result to DB
 
     This runs as one of N concurrent tasks inside asyncio.gather().
@@ -81,58 +82,87 @@ async def run_modal_inference(
             model_instance = ModelCls(model_name=model.hf_model_id)
 
             # Consume streaming generator via run_in_executor
-            # remote_gen() returns a sync generator; we wrap each next() call
-            # in an executor so it doesn't block the event loop
             gen = model_instance.generate_stream.remote_gen(
                 prompt=prompt, max_tokens=512, temperature=0.7
             )
             loop = asyncio.get_event_loop()
 
-            while True:
-                chunk = await loop.run_in_executor(None, lambda: next(gen, None))
-                if chunk is None:
-                    break
+            # Cold-start heartbeat: send progress while waiting for first chunk
+            first_chunk = asyncio.Event()
+            cold_start_time = time.monotonic()
 
-                stage = chunk.get("stage")
-
-                if stage == "generating":
-                    # Model loaded on GPU, inference starting
+            async def heartbeat():
+                await asyncio.sleep(5)  # grace period before assuming cold start
+                while not first_chunk.is_set():
+                    elapsed = round(time.monotonic() - cold_start_time)
                     await websocket.send_json({
-                        "type": "model_loading",
+                        "type": "model_cold_start",
                         "model_id": model_id,
-                        "model_name": model.name,
+                        "elapsed_seconds": elapsed,
                     })
+                    await asyncio.sleep(3)
 
-                elif stage == "token":
-                    # Stream individual token to client
-                    await websocket.send_json({
-                        "type": "token",
-                        "model_id": model_id,
-                        "delta": chunk["delta"],
-                    })
+            heartbeat_task = asyncio.create_task(heartbeat())
 
-                elif stage == "complete":
-                    metrics = chunk["metrics"]
+            try:
+                while True:
+                    chunk = await loop.run_in_executor(None, lambda: next(gen, None))
+                    if chunk is None:
+                        break
 
-                    # Push final result to client
-                    await websocket.send_json({
-                        "type": "model_complete",
-                        "model_id": model_id,
-                        "model_name": model.name,
-                        "result": {
-                            "id": result_id,
+                    if not first_chunk.is_set():
+                        first_chunk.set()
+                        heartbeat_task.cancel()
+
+                    stage = chunk.get("stage")
+
+                    if stage == "generating":
+                        # Model loaded on GPU, inference starting
+                        await websocket.send_json({
+                            "type": "model_loading",
                             "model_id": model_id,
-                            "status": "completed",
-                            **metrics,
-                        },
-                    })
+                            "model_name": model.name,
+                        })
 
-                    # Save to DB (for Results tab history)
-                    await db_session.refresh(result)
-                    result.status = "completed"
-                    for key, value in metrics.items():
-                        setattr(result, key, value)
-                    await db_session.commit()
+                    elif stage == "token":
+                        # Stream individual token to client
+                        await websocket.send_json({
+                            "type": "token",
+                            "model_id": model_id,
+                            "delta": chunk["delta"],
+                        })
+
+                    elif stage == "metrics_update":
+                        await websocket.send_json({
+                            "type": "metrics_update",
+                            "model_id": model_id,
+                            "metrics": chunk["metrics"],
+                        })
+
+                    elif stage == "complete":
+                        metrics = chunk["metrics"]
+
+                        # Push final result to client
+                        await websocket.send_json({
+                            "type": "model_complete",
+                            "model_id": model_id,
+                            "model_name": model.name,
+                            "result": {
+                                "id": result_id,
+                                "model_id": model_id,
+                                "status": "completed",
+                                **metrics,
+                            },
+                        })
+
+                        # Save to DB (for Results tab history)
+                        await db_session.refresh(result)
+                        result.status = "completed"
+                        for key, value in metrics.items():
+                            setattr(result, key, value)
+                        await db_session.commit()
+            finally:
+                heartbeat_task.cancel()
 
         except Exception as e:
             logger.error(f"Modal inference failed for model {model_id}: {e}")

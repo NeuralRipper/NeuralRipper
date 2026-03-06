@@ -18,7 +18,17 @@ interface MetricsRow {
 }
 
 const columns: ColumnDef<MetricsRow>[] = [
-    { accessorFn: r => r.name, id: "model", header: "Model" },
+    {
+        accessorFn: r => r.name, id: "model", header: "Model",
+        cell: ({ row }) => (
+            <span className="flex items-center gap-1.5">
+                {row.original.name}
+                {row.original.result.status === "streaming" && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                )}
+            </span>
+        ),
+    },
     {
         accessorFn: r => r.result.ttft_ms, id: "ttft", header: "TTFT (ms)",
         cell: ({ getValue }) => fmtNum(getValue<number | null>(), 0)

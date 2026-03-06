@@ -38,6 +38,17 @@ export function useInferenceSocket(sessionId: number | null) {
             return new Map(prev).set(msg.model_id!, { ...existing!, status: "streaming" })
           })
           break
+        case "model_cold_start":
+          setInferenceResults(prev => {
+            const existing = prev.get(msg.model_id!)
+            if (!existing) return prev
+            return new Map(prev).set(msg.model_id!, {
+              ...existing,
+              status: "cold_start",
+              cold_start_elapsed: msg.elapsed_seconds,
+            })
+          })
+          break
         case "token":
           setInferenceResults(prev => {
             const existing = prev.get(msg.model_id!)
@@ -46,6 +57,16 @@ export function useInferenceSocket(sessionId: number | null) {
               ...existing,
               status: "streaming",
               response_text: (existing.response_text ?? "") + (msg.delta ?? ""),
+            })
+          })
+          break
+        case "metrics_update":
+          setInferenceResults(prev => {
+            const existing = prev.get(msg.model_id!)
+            if (!existing) return prev
+            return new Map(prev).set(msg.model_id!, {
+              ...existing,
+              ...msg.metrics,
             })
           })
           break

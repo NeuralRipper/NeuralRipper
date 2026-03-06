@@ -11,7 +11,7 @@ import logging
 import sys
 import os
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
 # allow standalone execution from scripts/ dir
@@ -29,15 +29,12 @@ MODELS = [
     {"name": "Qwen2.5-7B-Instruct", "hf_model_id": "Qwen/Qwen2.5-7B-Instruct", "parameter_count": 7_000_000_000, "vram_gb": 16, "description": "Qwen2.5 7B — strong 7B-class model"},
     {"name": "Qwen2.5-14B-Instruct", "hf_model_id": "Qwen/Qwen2.5-14B-Instruct", "parameter_count": 14_000_000_000, "vram_gb": 30, "description": "Qwen2.5 14B — mid-tier, needs A100+"},
     {"name": "Qwen2.5-32B-Instruct", "hf_model_id": "Qwen/Qwen2.5-32B-Instruct", "parameter_count": 32_000_000_000, "vram_gb": 68, "description": "Qwen2.5 32B — large, needs H100"},
-    {"name": "Qwen2.5-72B-Instruct", "hf_model_id": "Qwen/Qwen2.5-72B-Instruct", "parameter_count": 72_000_000_000, "vram_gb": 145, "description": "Qwen2.5 72B — flagship, multi-GPU required"},
     # Llama 3.x family
     {"name": "Llama-3.2-1B-Instruct", "hf_model_id": "meta-llama/Llama-3.2-1B-Instruct", "parameter_count": 1_000_000_000, "vram_gb": 3, "description": "Llama 3.2 1B — lightweight edge model"},
     {"name": "Llama-3.2-3B-Instruct", "hf_model_id": "meta-llama/Llama-3.2-3B-Instruct", "parameter_count": 3_000_000_000, "vram_gb": 7, "description": "Llama 3.2 3B — compact general-purpose"},
     {"name": "Llama-3.1-8B-Instruct", "hf_model_id": "meta-llama/Llama-3.1-8B-Instruct", "parameter_count": 8_000_000_000, "vram_gb": 17, "description": "Llama 3.1 8B — flagship 8B, strong reasoning"},
-    {"name": "Llama-3.3-70B-Instruct", "hf_model_id": "meta-llama/Llama-3.3-70B-Instruct", "parameter_count": 70_000_000_000, "vram_gb": 140, "description": "Llama 3.3 70B — top-tier, multi-GPU required"},
     # Phi family (Microsoft)
     {"name": "Phi-3-mini-4k", "hf_model_id": "microsoft/Phi-3-mini-4k-instruct", "parameter_count": 3_800_000_000, "vram_gb": 8, "description": "Phi-3 Mini 3.8B — strong for its size"},
-    {"name": "Phi-3-small-8k", "hf_model_id": "microsoft/Phi-3-small-8k-instruct", "parameter_count": 7_000_000_000, "vram_gb": 15, "description": "Phi-3 Small 7B — efficient architecture"},
     {"name": "Phi-4", "hf_model_id": "microsoft/phi-4", "parameter_count": 14_000_000_000, "vram_gb": 30, "description": "Phi-4 14B — latest from Microsoft"},
     # Gemma 2 family (Google)
     {"name": "Gemma-2-2B-it", "hf_model_id": "google/gemma-2-2b-it", "parameter_count": 2_000_000_000, "vram_gb": 5, "description": "Gemma 2 2B — lightweight Google model"},
@@ -45,7 +42,6 @@ MODELS = [
     {"name": "Gemma-2-27B-it", "hf_model_id": "google/gemma-2-27b-it", "parameter_count": 27_000_000_000, "vram_gb": 56, "description": "Gemma 2 27B — large, needs H100"},
     # Mistral family
     {"name": "Mistral-7B-Instruct-v0.3", "hf_model_id": "mistralai/Mistral-7B-Instruct-v0.3", "parameter_count": 7_000_000_000, "vram_gb": 15, "description": "Mistral 7B v0.3 — proven 7B architecture"},
-    {"name": "Mixtral-8x7B-Instruct", "hf_model_id": "mistralai/Mixtral-8x7B-Instruct-v0.1", "parameter_count": 47_000_000_000, "vram_gb": 94, "description": "Mixtral 8x7B MoE — multi-GPU required"},
     # DeepSeek R1 distills
     {"name": "DeepSeek-R1-Distill-1.5B", "hf_model_id": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B", "parameter_count": 1_500_000_000, "vram_gb": 4, "description": "DeepSeek R1 distilled to 1.5B — reasoning-tuned"},
     {"name": "DeepSeek-R1-Distill-7B", "hf_model_id": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B", "parameter_count": 7_000_000_000, "vram_gb": 16, "description": "DeepSeek R1 distilled to 7B — reasoning-tuned"},
@@ -62,13 +58,9 @@ async def seed_models(engine: AsyncEngine):
     """Upsert curated models into DB. Safe to call on every startup."""
     factory = async_sessionmaker(engine, expire_on_commit=False)
     async with factory() as session:
-        existing = await session.execute(select(Model.hf_model_id))
-        existing_ids = {row[0] for row in existing.all()}
+        await session.execute(delete(Model))
 
-        added = 0
         for m in MODELS:
-            if m["hf_model_id"] in existing_ids:
-                continue
             session.add(Model(
                 name=m["name"],
                 hf_model_id=m["hf_model_id"],
@@ -79,13 +71,9 @@ async def seed_models(engine: AsyncEngine):
                 is_downloaded=False,
                 vram_gb=m["vram_gb"],
             ))
-            added += 1
 
         await session.commit()
-        if added:
-            logger.info(f"Seeded {added} new models ({len(MODELS) - added} already existed)")
-        else:
-            logger.info(f"All {len(MODELS)} models already seeded")
+        logger.info(f"Seeded {len(MODELS)} models (clean reset)")
 
 
 if __name__ == "__main__":

@@ -30,12 +30,9 @@ export default function Playground() {
   const [submittedPrompt, setSubmittedPrompt] = useState<string | null>(null)
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const cardsRef = useRef<HTMLDivElement>(null)
-
   const { inferenceResults, isComplete, error } = useInferenceSocket(sessionId)
 
   useEffect(() => { listModels().then(setModels).catch(console.error) }, [])
-  useEffect(() => { cardsRef.current?.scrollTo({ top: cardsRef.current.scrollHeight, behavior: "smooth" }) }, [inferenceResults])
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -64,7 +61,7 @@ export default function Playground() {
   // Build metrics rows from completed results
   const metricsRows = hasResults
     ? Array.from(inferenceResults.entries())
-      .filter(([, r]) => r.status === "completed")
+      .filter(([, r]) => r.status === "streaming" || r.status === "completed")
       .map(([modelId, result]) => ({
         name: models.find(m => m.id === modelId)?.name ?? `Model ${modelId}`,
         result,
@@ -176,31 +173,28 @@ export default function Playground() {
               </div>
             </div>
 
-            {/* Prompt cards scrollable */}
-            <div ref={cardsRef} className="flex-1 overflow-y-auto p-3 space-y-3">
+            {/* Prompt cards — flex even split */}
+            <div className="flex-1 flex flex-col p-3 gap-3 min-h-0">
               {hasResults
                 ? Array.from(inferenceResults.entries()).map(([modelId, result]) => (
-                  <PromptCard
-                    key={modelId}
-                    result={result}
-                    name={models.find(m => m.id === modelId)?.name ?? `Model ${modelId}`}
-                    streaming={running && result.status !== "completed" && result.status !== "failed"}
-                  />
+                  <div key={modelId} className="flex-1 min-h-0">
+                    <PromptCard
+                      result={result}
+                      name={models.find(m => m.id === modelId)?.name ?? `Model ${modelId}`}
+                      streaming={running && result.status !== "completed" && result.status !== "failed"}
+                    />
+                  </div>
                 ))
                 : !running && (
                   <>
                     {EXAMPLE_RESULTS.map((ex, i) => (
-                      <div key={i} className="opacity-50">
+                      <div key={i} className="flex-1 min-h-0 opacity-50">
                         <PromptCard result={ex.result} name={ex.name} />
                       </div>
                     ))}
                   </>
                 )
               }
-              {error && <div className="text-red-400 text-sm">{error}</div>}
-              {isComplete && hasResults && !error && (
-                <div className="text-center text-xs text-muted-foreground py-2">session complete</div>
-              )}
             </div>
             {/* Chat input — pinned to bottom of right panel */}
             <div className="border-t border-border p-3 space-y-2">
@@ -221,6 +215,8 @@ export default function Playground() {
                   {!user ? "Login to submit" : "Shift+Enter for new line"}
                 </span>
                 {running && <span className="text-cyan-400 animate-pulse">RUNNING...</span>}
+                {error && <span className="text-red-400">{error}</span>}
+                {isComplete && hasResults && !error && <span className="text-green-400">session complete</span>}
               </div>
             </div>
           </div>

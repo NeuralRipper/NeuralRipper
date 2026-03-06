@@ -43,7 +43,7 @@ export interface InferenceCreateResponse {
 export interface InferenceResultResponse {
   id: number
   model_id: number
-  status: "pending" | "streaming" | "completed" | "failed"
+  status: "pending" | "cold_start" | "streaming" | "completed" | "failed"
   response_text: string | null
   finish_reason: string | null
   // token counts
@@ -60,6 +60,8 @@ export interface InferenceResultResponse {
   gpu_utilization_pct: number | null
   gpu_memory_used_mb: number | null
   gpu_memory_total_mb: number | null
+  // client-side only
+  cold_start_elapsed?: number
 }
 
 export interface SessionListResponse {
@@ -78,10 +80,12 @@ export interface SessionDetailResponse extends SessionListResponse {
 
 // WebSocket message (server -> client), single flat type with optional fields per msg type
 export interface WsMessage {
-  type: "model_start" | "model_loading" | "token" | "model_complete" | "model_error" | "session_complete" | "error"
+  type: "model_start" | "model_loading" | "model_cold_start" | "token" | "metrics_update" | "model_complete" | "model_error" | "session_complete" | "error"
   model_id?: number
   model_name?: string
   result?: InferenceResultResponse
   message?: string
   delta?: string
+  metrics?: Partial<InferenceResultResponse>
+  elapsed_seconds?: number
 }
