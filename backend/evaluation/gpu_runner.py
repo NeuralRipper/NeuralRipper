@@ -1,16 +1,30 @@
 """
-Modal App definition — runs on Modal's GPU cloud
+Modal App definition — runs on Modal's GPU cloud.
 Defines vLLM inference classes with real token streaming + 4 GPU tiers.
+
+Uses vLLM subprocess + sleep mode for GPU memory snapshots (~5s cold starts).
 Deploy: cd backend && uv run modal deploy evaluation/gpu_runner.py
 """
 
 import modal
 import time
+import socket
+import subprocess
+
+VLLM_PORT = 8000
+METRICS_INTERVAL = 0.5  # seconds between streaming metrics updates
 
 vllm_image = (
     modal.Image.from_registry("nvidia/cuda:12.8.0-devel-ubuntu22.04", add_python="3.12")
     .entrypoint([])
-    .uv_pip_install("vllm==0.13.0", "huggingface_hub==0.36.0", "pynvml==12.0.0")
+    .uv_pip_install(
+        "vllm==0.13.0", "huggingface_hub==0.36.0", "pynvml==12.0.0", "aiohttp"
+    )
+    .env({
+        "VLLM_SERVER_DEV_MODE": "1",
+        "TORCHINDUCTOR_COMPILE_THREADS": "1",
+        "HF_XET_HIGH_PERFORMANCE": "1",
+    })
 )
 
 app = modal.App("neuralripper-inference")
@@ -23,7 +37,38 @@ VOLUMES = {
     "/root/.cache/vllm": vllm_cache_vol,
 }
 
-METRICS_INTERVAL = 0.5  # seconds between streaming metrics updates
+# Import requests inside image context for use in enter() methods
+with vllm_image.imports():
+    import requests as _requests
+
+
+def _wait_ready(proc: subprocess.Popen):
+    """Busy-poll until vLLM server is accepting connections."""
+    while True:
+        try:
+            socket.create_connection(("localhost", VLLM_PORT), timeout=1).close()
+            return
+        except OSError:
+            if proc.poll() is not None:
+                raise RuntimeError(f"vLLM exited with code {proc.returncode}")
+
+
+def _warmup(model_name: str):
+    """Run a few requests to capture JIT/CUDA artifacts before snapshot."""
+    payload = {"model": model_name, "prompt": "Hello", "max_tokens": 8}
+    for _ in range(3):
+        _requests.post(
+            f"http://localhost:{VLLM_PORT}/v1/completions",
+            json=payload, timeout=300,
+        ).raise_for_status()
+
+
+def _sleep():
+    _requests.post(f"http://localhost:{VLLM_PORT}/sleep?level=1").raise_for_status()
+
+
+def _wake_up():
+    _requests.post(f"http://localhost:{VLLM_PORT}/wake_up").raise_for_status()
 
 
 def _make_gpu_cls(gpu: str):
@@ -33,20 +78,15 @@ def _make_gpu_cls(gpu: str):
         model_name: str = modal.parameter()
 
         @modal.enter(snap=True)
-        def preload(self):
-            """Pre-import heavy modules on CPU — captured in memory snapshot."""
-            import torch  # noqa: F401
-            import vllm  # noqa: F401
+        def start(self):
+            """Start vLLM subprocess, warmup, then sleep for snapshot."""
             from huggingface_hub import snapshot_download
-            snapshot_download(self.model_name)
-
-        @modal.enter(snap=False)
-        async def load_engine(self):
-            """Initialize vLLM engine on GPU — runs after snapshot restore."""
-            from vllm.engine.arg_utils import AsyncEngineArgs
-            from vllm.engine.async_llm_engine import AsyncLLMEngine
             import pynvml
 
+            # Pre-download model weights
+            snapshot_download(self.model_name)
+
+            # Capture GPU info
             pynvml.nvmlInit()
             handle = pynvml.nvmlDeviceGetHandleByIndex(0)
             self._gpu_name = pynvml.nvmlDeviceGetName(handle)
@@ -55,100 +95,135 @@ def _make_gpu_cls(gpu: str):
             )
             pynvml.nvmlShutdown()
 
-            engine_args = AsyncEngineArgs(
-                model=self.model_name,
-                gpu_memory_utilization=0.9,
-                max_model_len=4096,
-                trust_remote_code=True,
-            )
-            self.engine = AsyncLLMEngine.from_engine_args(engine_args)
+            cmd = [
+                "vllm", "serve", self.model_name,
+                "--host", "0.0.0.0",
+                "--port", str(VLLM_PORT),
+                "--gpu-memory-utilization", "0.9",
+                "--max-model-len", "4096",
+                "--trust-remote-code",
+                "--enable-sleep-mode",
+                "--max-num-seqs", "4",
+            ]
+
+            print(f"Starting vLLM: {' '.join(cmd)}")
+            self.vllm_proc = subprocess.Popen(cmd)
+            _wait_ready(self.vllm_proc)
+            _warmup(self.model_name)
+            _sleep()  # offload weights to CPU for snapshot
+            print("vLLM sleeping, ready for snapshot")
+
+        @modal.enter(snap=False)
+        def restore(self):
+            """After snapshot restore: wake up vLLM to reload weights to GPU."""
+            _wake_up()
+            _wait_ready(self.vllm_proc)
+            print("vLLM restored from snapshot")
 
         @modal.method()
         async def generate_stream(
-            self, prompt: str, max_tokens: int = 512, temperature: float = 0.7
+            self, prompt: str, max_tokens: int = 2048, temperature: float = 0.7
         ):
             """
-            Async generator yielding structured chunks:
+            Async generator yielding structured chunks (same interface as before):
               1. {"stage": "generating"}                    — model loaded, starting inference
               2. {"stage": "token", "delta": ...}           — each new token
               3. {"stage": "metrics_update", "metrics": {}} — periodic running metrics
               4. {"stage": "complete", "metrics": {}}       — final metrics + GPU stats
             """
-            from vllm import SamplingParams
+            import aiohttp
+            import json
             import pynvml
-            import uuid
 
             yield {"stage": "generating"}
-
-            sampling_params = SamplingParams(
-                max_tokens=max_tokens,
-                temperature=temperature,
-            )
-
-            request_id = str(uuid.uuid4())
-            start = time.perf_counter()
-            ttft = None
-            previous_text = ""
-            prompt_tokens = 0
-            completion_tokens = 0
-            finish_reason = "unknown"
-            last_metrics_time = start
 
             pynvml.nvmlInit()
             handle = pynvml.nvmlDeviceGetHandleByIndex(0)
 
+            start = time.perf_counter()
+            ttft = None
+            full_text = ""
+            token_count = 0
+            prompt_tokens = 0
+            finish_reason = "unknown"
+            last_metrics_time = start
+
+            payload = {
+                "model": self.model_name,
+                "prompt": prompt,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+                "stream": True,
+                "stream_options": {"include_usage": True},
+            }
+
             try:
-                async for output in self.engine.generate(
-                    request_id=request_id,
-                    prompt=prompt,
-                    sampling_params=sampling_params,
-                ):
-                    current_text = output.outputs[0].text
-                    delta = current_text[len(previous_text):]
-                    if delta:
-                        if ttft is None:
-                            ttft = time.perf_counter() - start
-                        yield {"stage": "token", "delta": delta}
-                    previous_text = current_text
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(
+                        f"http://localhost:{VLLM_PORT}/v1/completions",
+                        json=payload,
+                    ) as resp:
+                        async for raw in resp.content:
+                            line = raw.decode().strip()
+                            if not line or line == "data: [DONE]":
+                                continue
+                            if line.startswith("data: "):
+                                line = line[len("data: "):]
 
-                    # Periodic metrics update (~every 500ms)
-                    now = time.perf_counter()
-                    if ttft is not None and now - last_metrics_time >= METRICS_INTERVAL:
-                        elapsed = now - start
-                        n = len(output.outputs[0].token_ids)
-                        util = pynvml.nvmlDeviceGetUtilizationRates(handle)
-                        mem = pynvml.nvmlDeviceGetMemoryInfo(handle)
-                        yield {
-                            "stage": "metrics_update",
-                            "metrics": {
-                                "ttft_ms": round(ttft * 1000, 2),
-                                "tpot_ms": round(
-                                    ((elapsed - ttft) / max(n - 1, 1)) * 1000, 2
-                                ),
-                                "tokens_per_second": round(n / elapsed, 2),
-                                "e2e_latency_ms": round(elapsed * 1000, 2),
-                                "gpu_utilization_pct": util.gpu,
-                                "gpu_memory_used_mb": round(mem.used / 1024 / 1024),
-                                "completion_tokens": n,
-                            },
-                        }
-                        last_metrics_time = now
+                            try:
+                                chunk = json.loads(line)
+                            except json.JSONDecodeError:
+                                continue
 
-                    if output.finished:
-                        if (
-                            hasattr(output, "prompt_token_ids")
-                            and output.prompt_token_ids
-                        ):
-                            prompt_tokens = len(output.prompt_token_ids)
-                        completion_tokens = len(output.outputs[0].token_ids)
-                        finish_reason = output.outputs[0].finish_reason or "unknown"
+                            # Usage-only final chunk
+                            if "usage" in chunk and chunk.get("choices", [{}])[0].get("text", "") == "":
+                                usage = chunk["usage"]
+                                prompt_tokens = usage.get("prompt_tokens", prompt_tokens)
+                                token_count = usage.get("completion_tokens", token_count)
+                                continue
 
+                            choice = chunk.get("choices", [{}])[0]
+                            delta = choice.get("text", "")
+
+                            if delta:
+                                if ttft is None:
+                                    ttft = time.perf_counter() - start
+                                full_text += delta
+                                token_count += 1
+                                yield {"stage": "token", "delta": delta}
+
+                            if choice.get("finish_reason"):
+                                finish_reason = choice["finish_reason"]
+
+                            # Periodic metrics (~every 500ms)
+                            now = time.perf_counter()
+                            if ttft is not None and now - last_metrics_time >= METRICS_INTERVAL:
+                                elapsed = now - start
+                                util = pynvml.nvmlDeviceGetUtilizationRates(handle)
+                                mem = pynvml.nvmlDeviceGetMemoryInfo(handle)
+                                yield {
+                                    "stage": "metrics_update",
+                                    "metrics": {
+                                        "ttft_ms": round(ttft * 1000, 2),
+                                        "tpot_ms": round(
+                                            ((elapsed - ttft) / max(token_count - 1, 1)) * 1000, 2
+                                        ),
+                                        "tokens_per_second": round(token_count / elapsed, 2),
+                                        "e2e_latency_ms": round(elapsed * 1000, 2),
+                                        "gpu_utilization_pct": util.gpu,
+                                        "gpu_memory_used_mb": round(mem.used / 1024 / 1024),
+                                        "completion_tokens": token_count,
+                                    },
+                                }
+                                last_metrics_time = now
+
+                # Final metrics
                 end = time.perf_counter()
                 e2e_ms = (end - start) * 1000
                 ttft_ms = (ttft or 0) * 1000
                 tpot_ms = (
-                    (e2e_ms - ttft_ms) / (completion_tokens - 1)
-                    if completion_tokens > 1
+                    (e2e_ms - ttft_ms) / (token_count - 1)
+                    if token_count > 1
                     else 0
                 )
 
@@ -158,15 +233,15 @@ def _make_gpu_cls(gpu: str):
                 yield {
                     "stage": "complete",
                     "metrics": {
-                        "response_text": previous_text,
+                        "response_text": full_text,
                         "finish_reason": finish_reason,
                         "prompt_tokens": prompt_tokens,
-                        "completion_tokens": completion_tokens,
-                        "total_tokens": prompt_tokens + completion_tokens,
+                        "completion_tokens": token_count,
+                        "total_tokens": prompt_tokens + token_count,
                         "ttft_ms": round(ttft_ms, 2),
                         "tpot_ms": round(tpot_ms, 2),
                         "tokens_per_second": (
-                            round(completion_tokens / (e2e_ms / 1000), 2)
+                            round(token_count / (e2e_ms / 1000), 2)
                             if e2e_ms > 0
                             else 0
                         ),
@@ -180,7 +255,10 @@ def _make_gpu_cls(gpu: str):
             finally:
                 pynvml.nvmlShutdown()
 
-    # Set class name BEFORE app.cls registers it
+        @modal.exit()
+        def stop(self):
+            self.vllm_proc.terminate()
+
     ModalClass.__name__ = f"Model{gpu}"
     ModalClass.__qualname__ = f"Model{gpu}"
 
@@ -188,10 +266,11 @@ def _make_gpu_cls(gpu: str):
         gpu=gpu,
         image=vllm_image,
         enable_memory_snapshot=True,
-        scaledown_window=900,
+        experimental_options={"enable_gpu_snapshot": True},
+        scaledown_window=300,
         volumes=VOLUMES,
         secrets=[modal.Secret.from_name("huggingface")],
-        timeout=5 * 60,
+        timeout=10 * 60,
     )(ModalClass)
 
 
