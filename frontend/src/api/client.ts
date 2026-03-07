@@ -25,7 +25,8 @@ export async function request<T>(path: string, options?: RequestInit): Promise<T
 
   const response = await fetch(`${BASE_URL}${path}`, { ...options, headers })
   if (!response.ok) {
-    throw new Error(`${response.status} ${response.statusText}`)
+    const body = await response.json().catch(() => null)
+    throw new Error(body?.detail ?? `${response.status} ${response.statusText}`)
   }
   return response.json()   // always return Promise<any> at runtime
 }

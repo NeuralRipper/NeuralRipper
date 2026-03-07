@@ -19,6 +19,8 @@ from db.models import Model
 
 logger = logging.getLogger(__name__)
 
+MODAL_SEMAPHORE = asyncio.Semaphore(10)
+
 GPU_CLASS_MAP = {
     "t4": "ModelT4",
     "a10g": "ModelA10G",
@@ -78,160 +80,162 @@ async def run_modal_inference(
         await db_session.commit()
 
         gen = None
-        try:
-            import modal
-
-            # Pick GPU class dynamically based on user's tier selection
-            class_name = GPU_CLASS_MAP.get(gpu_tier, "ModelA10G")
-            ModelCls = modal.Cls.from_name("neuralripper-inference", class_name)
-            model_instance = ModelCls(model_name=model.hf_model_id)
-
-            # Consume streaming generator via run_in_executor
-            gen = model_instance.generate_stream.remote_gen(
-                prompt=prompt, max_tokens=1024, temperature=0.7
-            )
-            loop = asyncio.get_event_loop()
-            completed_ok = False
-
-            # Cold-start heartbeat: send progress while waiting for first chunk
-            first_chunk = asyncio.Event()
-            cold_start_time = time.monotonic()
-
-            async def heartbeat():
-                await asyncio.sleep(5)  # grace period before assuming cold start
-                while not first_chunk.is_set():
-                    elapsed = round(time.monotonic() - cold_start_time)
-                    await websocket.send_json({
-                        "type": "model_cold_start",
-                        "model_id": model_id,
-                        "elapsed_seconds": elapsed,
-                    })
-                    await asyncio.sleep(3)
-
-            heartbeat_task = asyncio.create_task(heartbeat())
-
+        async with MODAL_SEMAPHORE:
             try:
-                while True:
-                    # Timeout per chunk — if Modal hangs, we abort
-                    chunk = await asyncio.wait_for(
-                        loop.run_in_executor(None, lambda: next(gen, None)),
-                        timeout=CHUNK_TIMEOUT_SECONDS,
-                    )
-                    if chunk is None:
-                        break
+                import modal
 
-                    if not first_chunk.is_set():
-                        first_chunk.set()
-                        heartbeat_task.cancel()
+                # Pick GPU class dynamically based on user's tier selection
+                class_name = GPU_CLASS_MAP.get(gpu_tier, "ModelA10G")
+                ModelCls = modal.Cls.from_name("neuralripper-inference", class_name)
+                model_instance = ModelCls(model_name=model.hf_model_id)
 
-                    stage = chunk.get("stage")
+                # Consume streaming generator via run_in_executor
+                gen = model_instance.generate_stream.remote_gen(
+                    prompt=prompt, max_tokens=1024, temperature=0.7
+                )
+                loop = asyncio.get_event_loop()
+                completed_ok = False
 
-                    if stage == "generating":
-                        # Model loaded on GPU, inference starting
+                # Cold-start heartbeat: send progress while waiting for first chunk
+                first_chunk = asyncio.Event()
+                cold_start_time = time.monotonic()
+
+                async def heartbeat():
+                    await asyncio.sleep(5)  # grace period before assuming cold start
+                    while not first_chunk.is_set():
+                        elapsed = round(time.monotonic() - cold_start_time)
                         await websocket.send_json({
-                            "type": "model_loading",
+                            "type": "model_cold_start",
                             "model_id": model_id,
-                            "model_name": model.name,
+                            "elapsed_seconds": elapsed,
                         })
+                        await asyncio.sleep(3)
 
-                    elif stage == "token":
-                        # Stream individual token to client
-                        await websocket.send_json({
-                            "type": "token",
-                            "model_id": model_id,
-                            "delta": chunk["delta"],
-                        })
+                heartbeat_task = asyncio.create_task(heartbeat())
 
-                    elif stage == "metrics_update":
-                        await websocket.send_json({
-                            "type": "metrics_update",
-                            "model_id": model_id,
-                            "metrics": chunk["metrics"],
-                        })
+                try:
+                    while True:
+                        # Timeout per chunk — if Modal hangs, we abort
+                        chunk = await asyncio.wait_for(
+                            loop.run_in_executor(None, lambda: next(gen, None)),
+                            timeout=CHUNK_TIMEOUT_SECONDS,
+                        )
+                        if chunk is None:
+                            break
 
-                    elif stage == "complete":
-                        metrics = chunk["metrics"]
+                        if not first_chunk.is_set():
+                            first_chunk.set()
+                            heartbeat_task.cancel()
 
-                        # Push final result to client
-                        await websocket.send_json({
-                            "type": "model_complete",
-                            "model_id": model_id,
-                            "model_name": model.name,
-                            "result": {
-                                "id": result_id,
+                        stage = chunk.get("stage")
+
+                        if stage == "generating":
+                            # Model loaded on GPU, inference starting
+                            await websocket.send_json({
+                                "type": "model_loading",
                                 "model_id": model_id,
-                                "status": "completed",
-                                **metrics,
-                            },
-                        })
+                                "model_name": model.name,
+                            })
 
-                        # Save to DB (for Results tab history)
+                        elif stage == "token":
+                            # Stream individual token to client
+                            await websocket.send_json({
+                                "type": "token",
+                                "model_id": model_id,
+                                "delta": chunk["delta"],
+                            })
+
+                        elif stage == "metrics_update":
+                            await websocket.send_json({
+                                "type": "metrics_update",
+                                "model_id": model_id,
+                                "metrics": chunk["metrics"],
+                            })
+
+                        elif stage == "complete":
+                            metrics = chunk["metrics"]
+
+                            # Push final result to client
+                            await websocket.send_json({
+                                "type": "model_complete",
+                                "model_id": model_id,
+                                "model_name": model.name,
+                                "result": {
+                                    "id": result_id,
+                                    "model_id": model_id,
+                                    "status": "completed",
+                                    **metrics,
+                                },
+                            })
+
+                            # Save to DB (for Results tab history)
+                            try:
+                                await db_session.refresh(result)
+                                result.status = "completed"
+                                for key, value in metrics.items():
+                                    setattr(result, key, value)
+                                await db_session.commit()
+                            except Exception as db_err:
+                                logger.error(f"DB commit failed after model {model_id} completed: {db_err}")
+                            completed_ok = True
+
+                except asyncio.TimeoutError:
+                    if gen is not None:
                         try:
-                            await db_session.refresh(result)
-                            result.status = "completed"
-                            for key, value in metrics.items():
-                                setattr(result, key, value)
-                            await db_session.commit()
-                        except Exception as db_err:
-                            logger.error(f"DB commit failed after model {model_id} completed: {db_err}")
-                        completed_ok = True
+                            gen.close()
+                        except Exception:
+                            pass
+                    logger.error(f"Modal inference timed out for model {model_id} after {CHUNK_TIMEOUT_SECONDS}s")
+                    await websocket.send_json({
+                        "type": "model_error",
+                        "model_id": model_id,
+                        "model_name": model.name,
+                        "message": f"Inference timed out after {CHUNK_TIMEOUT_SECONDS}s",
+                    })
+                    await db_session.refresh(result)
+                    result.status = "failed"
+                    result.response_text = f"Timed out after {CHUNK_TIMEOUT_SECONDS}s"
+                    await db_session.commit()
+                finally:
+                    heartbeat_task.cancel()
 
-            except asyncio.TimeoutError:
+            except asyncio.CancelledError:
+                # Task was cancelled (user pressed Stop) — close remote generator
                 if gen is not None:
                     try:
                         gen.close()
                     except Exception:
                         pass
-                logger.error(f"Modal inference timed out for model {model_id} after {CHUNK_TIMEOUT_SECONDS}s")
+                logger.info(f"Inference cancelled for model {model_id}")
                 await websocket.send_json({
                     "type": "model_error",
                     "model_id": model_id,
                     "model_name": model.name,
-                    "message": f"Inference timed out after {CHUNK_TIMEOUT_SECONDS}s",
+                    "message": "Cancelled by user",
+                    "status": "cancelled",
+                })
+                await db_session.refresh(result)
+                result.status = "cancelled"
+                result.response_text = "Cancelled by user"
+                await db_session.commit()
+
+            except Exception as e:
+                if completed_ok:
+                    logger.warning(f"Post-completion error for model {model_id} (ignoring): {e}")
+                    return
+                if gen is not None:
+                    try:
+                        gen.close()
+                    except Exception:
+                        pass
+                logger.error(f"Modal inference failed for model {model_id}: {e}\n{traceback.format_exc()}")
+                await websocket.send_json({
+                    "type": "model_error",
+                    "model_id": model_id,
+                    "model_name": model.name,
+                    "message": str(e),
                 })
                 await db_session.refresh(result)
                 result.status = "failed"
-                result.response_text = f"Timed out after {CHUNK_TIMEOUT_SECONDS}s"
+                result.response_text = str(e)
                 await db_session.commit()
-            finally:
-                heartbeat_task.cancel()
-
-        except asyncio.CancelledError:
-            # Task was cancelled (user pressed Stop) — close remote generator
-            if gen is not None:
-                try:
-                    gen.close()
-                except Exception:
-                    pass
-            logger.info(f"Inference cancelled for model {model_id}")
-            await websocket.send_json({
-                "type": "model_error",
-                "model_id": model_id,
-                "model_name": model.name,
-                "message": "Cancelled by user",
-            })
-            await db_session.refresh(result)
-            result.status = "failed"
-            result.response_text = "Cancelled by user"
-            await db_session.commit()
-
-        except Exception as e:
-            if completed_ok:
-                logger.warning(f"Post-completion error for model {model_id} (ignoring): {e}")
-                return
-            if gen is not None:
-                try:
-                    gen.close()
-                except Exception:
-                    pass
-            logger.error(f"Modal inference failed for model {model_id}: {e}\n{traceback.format_exc()}")
-            await websocket.send_json({
-                "type": "model_error",
-                "model_id": model_id,
-                "model_name": model.name,
-                "message": str(e),
-            })
-            await db_session.refresh(result)
-            result.status = "failed"
-            result.response_text = str(e)
-            await db_session.commit()

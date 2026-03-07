@@ -44,7 +44,7 @@ export interface InferenceCreateResponse {
 export interface InferenceResultResponse {
   id: number
   model_id: number
-  status: "pending" | "cold_start" | "streaming" | "completed" | "failed"
+  status: "pending" | "cold_start" | "streaming" | "completed" | "failed" | "cancelled"
   response_text: string | null
   finish_reason: string | null
   // token counts
@@ -89,4 +89,5 @@ export interface WsMessage {
   delta?: string
   metrics?: Partial<InferenceResultResponse>
   elapsed_seconds?: number
+  status?: string
 }

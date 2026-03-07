@@ -7,9 +7,10 @@ WS   /inference/ws/{session_id}     -> WebSocket: auth, run Modal, push results 
 """
 
 import asyncio
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from dependencies.db import get_session
@@ -42,6 +43,27 @@ async def create_inference(
     Does NOT fire Modal tasks, the WebSocket endpoint handles that.
     Frontend flow: POST here → get session_id → open WebSocket → Modal runs there.
     """
+    # Rate limit: max 1 active session at a time
+    active = await session.execute(
+        select(InferenceSession.id).where(
+            InferenceSession.user_id == user_id,
+            InferenceSession.status.in_(["pending", "running"]),
+        ).limit(1)
+    )
+    if active.scalar_one_or_none():
+        raise HTTPException(429, "Active session in progress. Wait for it to finish.")
+
+    # Rate limit: max 5 prompts per hour
+    one_hour_ago = datetime.now(timezone.utc) - timedelta(hours=1)
+    count_result = await session.execute(
+        select(func.count(InferenceSession.id)).where(
+            InferenceSession.user_id == user_id,
+            InferenceSession.created_at >= one_hour_ago,
+        )
+    )
+    if count_result.scalar() >= 5:
+        raise HTTPException(429, "Rate limit: max 5 prompts per hour.")
+
     inf_session = InferenceSession(
         user_id=user_id, prompt=body.prompt, model_ids=body.model_ids, gpu_tier=body.gpu_tier
     )
@@ -200,6 +222,10 @@ async def inference_ws(websocket: WebSocket, session_id: int):
         )
         results = db_res.scalars().all()
 
+        # Mark session as running
+        inf_session.status = "running"
+        await session.commit()
+
         # 3. Run Modal inference concurrently
         tasks = [
             asyncio.create_task(
@@ -223,6 +249,8 @@ async def inference_ws(websocket: WebSocket, session_id: int):
                     if data.get("type") == "cancel":
                         for t in tasks:
                             t.cancel()
+                        inf_session.status = "cancelled"
+                        await session.commit()
                         return
             except (WebSocketDisconnect, Exception):
                 return
@@ -237,7 +265,11 @@ async def inference_ws(websocket: WebSocket, session_id: int):
 
         cancel_listener.cancel()
 
-        # 5. Done
+        # 5. Done — mark completed only if not already cancelled
+        if inf_session.status != "cancelled":
+            inf_session.status = "completed"
+            await session.commit()
+
         try:
             await websocket.send_json({"type": "session_complete"})
             await websocket.close()

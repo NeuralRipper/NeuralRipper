@@ -17,16 +17,18 @@ export default function PromptCard({ result, name, streaming }: {
 
     const statusText =
         done ? "completed"
-            : result.status === "failed" ? "failed"
-                : result.status === "cold_start" ? `cold start (${result.cold_start_elapsed ?? 0}s)`
-                    : result.response_text ? "streaming..."
-                        : result.status === "streaming" ? "loading model..."
-                            : "starting..."
+            : result.status === "cancelled" ? "cancelled"
+                : result.status === "failed" ? "failed"
+                    : result.status === "cold_start" ? `cold start (${result.cold_start_elapsed ?? 0}s)`
+                        : result.response_text ? "streaming..."
+                            : result.status === "streaming" ? "loading model..."
+                                : "starting..."
 
     const statusColor =
         done ? "text-green-400"
-            : result.status === "failed" ? "text-red-400"
-                : "text-yellow-400"
+            : result.status === "cancelled" ? "text-orange-400"
+                : result.status === "failed" ? "text-red-400"
+                    : "text-yellow-400"
 
     return (
         <div className="border border-border bg-card p-3 flex flex-col h-full min-h-0">

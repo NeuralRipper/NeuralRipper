@@ -15,7 +15,7 @@ class InferenceResult(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     session_id: Mapped[int] = mapped_column(ForeignKey("inference_sessions.id", ondelete="CASCADE"), nullable=False)
     model_id: Mapped[int] = mapped_column(ForeignKey("models.id", ondelete="CASCADE"), nullable=False)
-    status: Mapped[str] = mapped_column(Enum("pending", "streaming", "completed", "failed"), default="pending")
+    status: Mapped[str] = mapped_column(Enum("pending", "streaming", "completed", "failed", "cancelled"), default="pending")
     response_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     finish_reason: Mapped[str | None] = mapped_column(String(20), nullable=True)
     # token counts

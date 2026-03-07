@@ -122,7 +122,7 @@ export function useInferenceSocket(sessionId: number | null) {
             const existing = prev.get(msg.model_id!)
             return new Map(prev).set(msg.model_id!, {
               ...existing!,
-              status: "failed",
+              status: msg.status === "cancelled" ? "cancelled" : "failed",
               response_text: existing?.response_text ?? msg.message ?? null,
             })
           })

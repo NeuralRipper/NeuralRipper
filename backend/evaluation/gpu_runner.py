@@ -271,7 +271,7 @@ def _make_gpu_cls(gpu: str):
         image=vllm_image,
         enable_memory_snapshot=True,
         experimental_options={"enable_gpu_snapshot": True},
-        scaledown_window=300,
+        scaledown_window=180,
         volumes=VOLUMES,
         secrets=[modal.Secret.from_name("huggingface")],
         timeout=10 * 60,

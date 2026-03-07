@@ -39,6 +39,7 @@ export default function Playground() {
   const [submittedPrompt, setSubmittedPrompt] = useState<string | null>(null)
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false)
   const [recoveredResults, setRecoveredResults] = useState<Map<number, InferenceResultResponse> | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { inferenceResults, isComplete, error, cancel, resetSocket } = useInferenceSocket(sessionId)
 
@@ -86,10 +87,15 @@ export default function Playground() {
 
   const submit = async () => {
     if (!user || !prompt.trim() || selectedIds.length === 0) return
+    setSubmitError(null)
     setRecoveredResults(null)
     setSubmittedPrompt(prompt)
-    const res = await createSession({ prompt, model_ids: selectedIds, gpu_tier: gpuTier })
-    setSessionId(res.session_id)
+    try {
+      const res = await createSession({ prompt, model_ids: selectedIds, gpu_tier: gpuTier })
+      setSessionId(res.session_id)
+    } catch (err: any) {
+      setSubmitError(err.message)
+    }
   }
 
   const reset = () => {
@@ -278,7 +284,7 @@ export default function Playground() {
                       </button>
                     </>
                   )}
-                  {error && <span className="text-red-400">{error}</span>}
+                  {(error || submitError) && <span className="text-red-400">{error || submitError}</span>}
                   {isComplete && hasResults && !error && (
                     <span className="text-green-400">session complete</span>
                   )}
