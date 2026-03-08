@@ -32,5 +32,18 @@ services:
       MODAL_TOKEN_ID: ak-7efH7y4kkFjhhqTkepxKuj
       MODAL_TOKEN_SECRET: as-GcxOQsULJpLLGbwKJg2zIc
 
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        VITE_API_BASE_URL: http://localhost:8000
+        VITE_WS_BASE_URL: ws://localhost:8000
+        VITE_GOOGLE_CLIENT_ID: 885687504549-vun2868u6r1r4qgula373uq307haq62i.apps.googleusercontent.com
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
 volumes:
   mysql_data:
