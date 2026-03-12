@@ -8,7 +8,7 @@ SECRET_ID=${SECRET_ID:-neuralripper-prod}
 # ---- Install dependencies ----
 
 sudo apt-get update
-sudo apt-get install -y docker.io docker-compose-plugin jq unzip gzip curl
+sudo apt-get install -y jq unzip gzip curl
 
 # Install AWS CLI v2
 if ! command -v aws &> /dev/null; then
