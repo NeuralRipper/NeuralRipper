@@ -18,9 +18,6 @@ if ! command -v aws &> /dev/null; then
   rm -rf /tmp/awscliv2.zip /tmp/aws
 fi
 
-# Ensure current user can run docker without sudo
-sudo usermod -aG docker "$USER"
-
 # ---- Build & push images to ECR ----
 
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
