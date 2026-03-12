@@ -10,6 +10,26 @@ SECRET_ID=${SECRET_ID:-neuralripper-prod}
 sudo apt-get update
 sudo apt-get install -y jq unzip gzip curl
 
+# Install Docker if not present
+if ! command -v docker &> /dev/null; then
+  sudo apt-get install -y ca-certificates
+  sudo install -m 0755 -d /etc/apt/keyrings
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo tee /etc/apt/keyrings/docker.asc > /dev/null
+  sudo chmod a+r /etc/apt/keyrings/docker.asc
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+    sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  sudo apt-get update
+  sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+  sudo usermod -aG docker "$USER"
+  echo "Docker installed. Re-run this script (it will use sudo for docker this time)."
+fi
+
+# Use sudo for docker if current user isn't in docker group yet
+DOCKER="docker"
+if ! docker info &> /dev/null; then
+  DOCKER="sudo docker"
+fi
+
 # Install AWS CLI v2
 if ! command -v aws &> /dev/null; then
   curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
@@ -24,10 +44,10 @@ AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 ECR_URL="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
 aws ecr get-login-password --region "$AWS_REGION" | \
-  docker login --username AWS --password-stdin "$ECR_URL"
+  $DOCKER login --username AWS --password-stdin "$ECR_URL"
 
-docker build -t "$ECR_URL/neuralripper-backend:$IMAGE_TAG" -f backend/Dockerfile backend/
-docker build \
+$DOCKER build -t "$ECR_URL/neuralripper-backend:$IMAGE_TAG" -f backend/Dockerfile backend/
+$DOCKER build \
   --build-arg VITE_API_BASE_URL=https://neuralripper.com/api \
   --build-arg VITE_WS_BASE_URL=wss://neuralripper.com \
   --build-arg VITE_GOOGLE_CLIENT_ID=$(aws secretsmanager get-secret-value \
@@ -36,8 +56,8 @@ docker build \
   -t "$ECR_URL/neuralripper-frontend:$IMAGE_TAG" \
   -f Dockerfile.frontend .
 
-docker push "$ECR_URL/neuralripper-backend:$IMAGE_TAG"
-docker push "$ECR_URL/neuralripper-frontend:$IMAGE_TAG"
+$DOCKER push "$ECR_URL/neuralripper-backend:$IMAGE_TAG"
+$DOCKER push "$ECR_URL/neuralripper-frontend:$IMAGE_TAG"
 
 # ---- Fetch secrets & deploy ----
 
@@ -53,7 +73,7 @@ export GOOGLE_CLIENT_ID=$(echo "$SECRET_JSON" | jq -r '.GOOGLE_CLIENT_ID')
 export MODAL_TOKEN_ID=$(echo "$SECRET_JSON" | jq -r '.MODAL_TOKEN_ID')
 export MODAL_TOKEN_SECRET=$(echo "$SECRET_JSON" | jq -r '.MODAL_TOKEN_SECRET')
 
-docker compose -f docker-compose.prod.yml pull
-docker compose -f docker-compose.prod.yml up -d --remove-orphans
+$DOCKER compose -f docker-compose.prod.yml pull
+$DOCKER compose -f docker-compose.prod.yml up -d --remove-orphans
 
 echo "Deployed with IMAGE_TAG=$IMAGE_TAG"
