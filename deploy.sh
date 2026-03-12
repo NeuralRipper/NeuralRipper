@@ -1,44 +1,49 @@
 #!/bin/bash
 set -euo pipefail
 
+AWS_REGION=${AWS_REGION:-us-east-1}
+IMAGE_TAG=${1:-latest}
+SECRET_ID=${SECRET_ID:-neuralripper-prod}
+
 # ---- Install dependencies ----
 
-if ! command -v docker &> /dev/null; then
-  echo "Installing Docker..."
-  sudo apt-get update
-  sudo apt-get install -y ca-certificates curl
-  sudo install -m 0755 -d /etc/apt/keyrings
-  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo tee /etc/apt/keyrings/docker.asc > /dev/null
-  sudo chmod a+r /etc/apt/keyrings/docker.asc
-  echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-    sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-  sudo apt-get update
-  sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-  sudo usermod -aG docker "$USER"
-  echo "Docker installed. You may need to log out and back in for group changes."
-fi
+sudo apt-get update
+sudo apt-get install -y docker.io docker-compose-plugin jq unzip gzip curl
 
-if ! command -v aws &> /dev/null || ! aws --version 2>&1 | grep -q "aws-cli/2"; then
-  echo "Installing AWS CLI v2..."
+# Install AWS CLI v2
+if ! command -v aws &> /dev/null; then
   curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
   unzip -qo /tmp/awscliv2.zip -d /tmp
-  sudo /tmp/aws/install --update
+  sudo /tmp/aws/install
   rm -rf /tmp/awscliv2.zip /tmp/aws
 fi
 
-if ! command -v jq &> /dev/null; then
-  echo "Installing jq..."
-  sudo apt-get update && sudo apt-get install -y jq
-fi
+# Ensure current user can run docker without sudo
+sudo usermod -aG docker "$USER"
 
-# ---- Deploy ----
+# ---- Build & push images to ECR ----
 
-AWS_REGION=${AWS_REGION:-us-east-1}
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-IMAGE_TAG=${1:-latest}
-SECRET_ID=${SECRET_ID:-neuralripper}
+ECR_URL="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
-echo "Fetching secrets from AWS Secrets Manager..."
+aws ecr get-login-password --region "$AWS_REGION" | \
+  docker login --username AWS --password-stdin "$ECR_URL"
+
+docker build -t "$ECR_URL/neuralripper-backend:$IMAGE_TAG" -f backend/Dockerfile backend/
+docker build \
+  --build-arg VITE_API_BASE_URL=https://neuralripper.com/api \
+  --build-arg VITE_WS_BASE_URL=wss://neuralripper.com \
+  --build-arg VITE_GOOGLE_CLIENT_ID=$(aws secretsmanager get-secret-value \
+    --secret-id "$SECRET_ID" --region "$AWS_REGION" \
+    --query SecretString --output text | jq -r '.GOOGLE_CLIENT_ID') \
+  -t "$ECR_URL/neuralripper-frontend:$IMAGE_TAG" \
+  -f Dockerfile.frontend .
+
+docker push "$ECR_URL/neuralripper-backend:$IMAGE_TAG"
+docker push "$ECR_URL/neuralripper-frontend:$IMAGE_TAG"
+
+# ---- Fetch secrets & deploy ----
+
 SECRET_JSON=$(aws secretsmanager get-secret-value \
   --secret-id "$SECRET_ID" --region "$AWS_REGION" \
   --query SecretString --output text)
@@ -51,13 +56,7 @@ export GOOGLE_CLIENT_ID=$(echo "$SECRET_JSON" | jq -r '.GOOGLE_CLIENT_ID')
 export MODAL_TOKEN_ID=$(echo "$SECRET_JSON" | jq -r '.MODAL_TOKEN_ID')
 export MODAL_TOKEN_SECRET=$(echo "$SECRET_JSON" | jq -r '.MODAL_TOKEN_SECRET')
 
-echo "Logging in to ECR..."
-aws ecr get-login-password --region "$AWS_REGION" | \
-  docker login --username AWS --password-stdin \
-  "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-
-echo "Deploying with IMAGE_TAG=$IMAGE_TAG..."
 docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d --remove-orphans
 
-echo "Done."
+echo "Deployed with IMAGE_TAG=$IMAGE_TAG"
