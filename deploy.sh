@@ -21,13 +21,12 @@ if ! command -v docker &> /dev/null; then
   sudo apt-get update
   sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
   sudo usermod -aG docker "$USER"
-  echo "Docker installed. Re-run this script (it will use sudo for docker this time)."
 fi
 
-# Use sudo for docker if current user isn't in docker group yet
+# Use sudo -E for docker if current user isn't in docker group yet
 DOCKER="docker"
 if ! docker info &> /dev/null; then
-  DOCKER="sudo docker"
+  DOCKER="sudo -E docker"
 fi
 
 # Install AWS CLI v2
