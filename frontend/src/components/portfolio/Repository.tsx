@@ -1,9 +1,18 @@
 import { useState, useEffect } from "react";
-import { ActivityCalendar } from 'react-activity-calendar'
+import { ActivityCalendar, type Activity } from 'react-activity-calendar'
 import { getContributions } from "@/api/github"
 
+interface ContributionDay {
+    date: string;
+    contributionCount: number;
+}
+
+interface ContributionWeek {
+    contributionDays: ContributionDay[];
+}
+
 const Repository: React.FC = () => {
-    const [activityData, setActivityData] = useState(null)
+    const [activityData, setActivityData] = useState<any>(null)
 
     useEffect(() => {
         getContributions()
@@ -11,8 +20,8 @@ const Repository: React.FC = () => {
             .catch(() => console.log("Fetch repo info failed."))
     }, [])
 
-    const transformData = (weeks) => {
-        const data = [];
+    const transformData = (weeks: ContributionWeek[]): Activity[] => {
+        const data: Activity[] = [];
         weeks.forEach(week => {
             week.contributionDays.forEach(day => {
                 data.push({
@@ -43,9 +52,9 @@ const Repository: React.FC = () => {
                             '#67e8f9'
                             ]
                 }}
-                hideMonthLabels
-                hideTotalCount
-                hideColorLegend
+                showMonthLabels={false}
+                showTotalCount={false}
+                showColorLegend={false}
             />
         </div>
 
