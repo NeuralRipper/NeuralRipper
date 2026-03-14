@@ -1,33 +1,55 @@
 import Repository from "./Repository";
-import { Mail, MapPin, User, Code, GraduationCap, Briefcase, Github } from 'lucide-react';
+import { Mail, Globe, User, Code, GraduationCap, Briefcase, Github, Linkedin, Database, Cloud, Monitor, Cpu } from 'lucide-react';
 
 const Portfolio = () => {
     const header = {
-        name: "YJ",
-        title: "Software Engineer (AI/ML & Full Stack)",
+        name: "Junsheng (YJ) Ye",
+        title: "Software Engineer",
         contact: [
             { icon: <Mail className="w-4 h-4" />, text: "overdosedizzy@gmail.com" },
-            { icon: <Github className="w-4 h-4" />, text: "https://github.com/DizzyDoze"},
-            { icon: <MapPin className="w-4 h-4" />, text: "San Francisco, CA" }
+            { icon: <Linkedin className="w-4 h-4" />, text: "linkedin.com/in/yj-pro", link: "https://linkedin.com/in/yj-pro" },
+            { icon: <Github className="w-4 h-4" />, text: "github.com/DizzyDoze", link: "https://github.com/DizzyDoze" },
+            { icon: <Globe className="w-4 h-4" />, text: "neuralripper.com", link: "https://neuralripper.com" },
         ]
     };
 
     const summary = {
-        text: "M.S. Computer Science student with 3+ years software engineering experience specializing in production ML model fine-tuning using PyTorch, multi-agent platforms using LangChain/LangGraph, and full-stack AI application deployment."
+        text: "Software Engineer with 3+ years of experience building production AI systems and full-stack applications. Specialized in multi-agent orchestration (LangChain/LangGraph), RAG pipelines with vector databases, and scalable LLM inference. Hands-on fine-tuning experience with transformer models (BERT, GPT-2) and CNNs (ResNet, EfficientNet) using PyTorch. Full-stack across Python, FastAPI, React, and TypeScript."
     };
 
     const techSkills = {
-        languages: ['Python', 'Java', 'JavaScript', 'TypeScript', 'Golang', 'SQL'],
-        aiml: ['PyTorch', 'LangChain', 'RAG', 'LLM fine-tuning', 'TensorFlow', 'CNNs'],
-        frameworks: ['React', 'FastAPI', 'Flask', 'Django', 'Docker', 'AWS']
+        languages: ['Python', 'TypeScript', 'JavaScript', 'Java', 'Golang', 'SQL', 'Shell', 'Rust'],
+        aiml: ['LangChain', 'LangGraph', 'RAG', 'pgvector', 'Agentic AI', 'MCP', 'LLM Fine-tuning', 'Prompt Engineering', 'PyTorch', 'TensorFlow', 'MLflow', 'LangSmith'],
+        backend: ['FastAPI', 'Flask', 'Django', 'Node.js', 'REST APIs', 'WebSocket', 'Microservices'],
+        frontend: ['React', 'Next.js', 'TypeScript', 'Vite', 'TailwindCSS', 'Material UI', 'Redux'],
+        databases: ['PostgreSQL', 'MySQL', 'MongoDB', 'Redis', 'Elasticsearch', 'pgvector'],
+        cloud: ['AWS (ECS, ECR, S3, RDS, Lambda, VPC, Cognito)', 'Docker', 'Kubernetes', 'Nginx', 'CI/CD', 'Git'],
+    };
+
+    const skillIcons: Record<string, React.ReactNode> = {
+        languages: <Code className="w-4 h-4 text-cyan-400" />,
+        aiml: <Cpu className="w-4 h-4 text-cyan-400" />,
+        backend: <Monitor className="w-4 h-4 text-cyan-400" />,
+        frontend: <Monitor className="w-4 h-4 text-cyan-400" />,
+        databases: <Database className="w-4 h-4 text-cyan-400" />,
+        cloud: <Cloud className="w-4 h-4 text-cyan-400" />,
+    };
+
+    const skillLabels: Record<string, string> = {
+        languages: 'Languages',
+        aiml: 'AI/ML',
+        backend: 'Backend',
+        frontend: 'Frontend',
+        databases: 'Databases',
+        cloud: 'Cloud/DevOps',
     };
 
     const education = [
         {
             degree: "M.S. Computer Science",
             school: "University of San Francisco",
-            period: "Aug 2023 – Present",
-            current: true
+            period: "Aug 2023 – May 2026",
+            current: false
         },
     ];
 
@@ -38,10 +60,11 @@ const Portfolio = () => {
             period: "May 2025 – Present",
             current: true,
             achievements: [
-                "Architected multi-agent mortgage automation platform using FastAPI and LangChain/LangGraph framework",
-                "Implemented RAG pipeline with PostgreSQL for mortgage guideline embeddings using cosine similarity search",
-                "Modified LibreChat open-source frontend by developing custom RAG tools in the backend",
-                "Deployed scalable infrastructure using Docker containerization and AWS ECS with Registry integration"
+                "Architected multi-agent mortgage guidelines platform with FastAPI serving Fannie Mae, Freddie Mac, FHA, VA, USDA guidelines. Implemented LangGraph ReAct agents with AgentFactory pattern for dynamic orchestration",
+                "Built production RAG system with pgvector semantic search, Cohere reranking, and AWS Textract for PDF/document extraction, achieving 35% improvement in retrieval precision across 100K+ guideline documents",
+                "Designed MCP tool framework with 10+ agentic tools including RAG retrieval, section lookup, web search, OCR. Enabled non-technical users to compose custom mortgage assistants",
+                "Implemented end-to-end AWS infrastructure: ECS/Fargate, ECR, S3, RDS PostgreSQL, VPC networking, Cognito JWT auth",
+                "Developed async SSE streaming with conversation persistence, achieving sub-100ms first-token latency. Integrated LangSmith for real-time cost analytics and observability across 10K+ daily sessions"
             ]
         },
         {
@@ -50,19 +73,19 @@ const Portfolio = () => {
             period: "Feb 2025 – May 2025",
             current: false,
             achievements: [
-                "Built core features for financial analytics platform using React, JavaScript/TypeScript, and Vite",
-                "Implemented RESTful APIs with Flask and utilized Docker for packaging and deployment",
-                "Automated CI/CD pipelines and leveraged AWS services (EC2, S3, Lambda, API Gateway)"
+                "Built core features for financial analytics platform using React, TypeScript, and Vite. Integrated Elasticsearch improving search relevance scores by 40%",
+                "Designed RESTful APIs with FastAPI for real-time market data processing. Containerized services with Docker achieving consistent deployments across dev/staging/prod",
+                "Automated CI/CD pipelines with GitHub Actions. Managed AWS infrastructure (EC2, S3, Lambda, API Gateway) reducing deployment time from 2 hours to 15 minutes"
             ]
         },
         {
-            title: "Teaching Assistant of AI Foundation",
+            title: "Teaching Assistant, AI Foundations",
             company: "University of San Francisco",
             period: "Aug 2024 – May 2025",
             current: false,
             achievements: [
-                "Supported instruction in core AI topics: search, optimization, Decision Trees, KNN, probabilistic inference",
-                "Guided students through coding assignments, lab exercises, and problem-solving sessions"
+                "Supported instruction for 120+ students in search algorithms, decision trees, probabilistic inference, MDPs, reinforcement learning, and neural networks",
+                "Guided coding assignments in Python. Led weekly problem-solving sessions. Contributed to course materials and grading"
             ]
         },
         {
@@ -71,11 +94,13 @@ const Portfolio = () => {
             period: "Mar 2019 – Oct 2020",
             current: false,
             achievements: [
-                "Developed backend services using Flask and Django, designed APIs for Data Analysis Department",
-                "Developed migration platform facilitating successful migration of 100 PB of data across 20+ clusters",
-                "Automated cluster management using Python, improving efficiency by 30%"
+                "Developed backend services with Flask and Django, designing RESTful APIs for the big data platform serving 5 teams, reducing platform usage complaints by 25%",
+                "Built data migration platform orchestrating 100 PB of HDFS data and Hive tables across 20+ clusters, reducing data transfer time by 20%",
+                "Automated migration tasks with Python and Redis for real-time task tracking, leveraging multiprocessing for concurrent execution",
+                "Automated cluster operations and resource management with Python, cutting infrastructure costs by 30%",
+                "Built observability dashboards in Grafana, improving system visibility and reducing incident response time by 40%"
             ]
-        }
+        },
     ];
 
     return (
@@ -129,36 +154,21 @@ const Portfolio = () => {
                             <h2 className="text-lg font-semibold text-cyan-400">Technical Skills</h2>
                         </div>
                         <div className="space-y-3">
-                            <div>
-                                <h4 className="text-cyan-300 font-medium text-sm mb-2">Languages</h4>
-                                <div className="flex flex-wrap gap-1">
-                                    {techSkills.languages.map(skill => (
-                                        <span key={skill} className="bg-cyan-900 text-cyan-200 px-2 py-1 rounded text-xs">
-                                            {skill}
-                                        </span>
-                                    ))}
+                            {Object.entries(techSkills).map(([key, skills]) => (
+                                <div key={key}>
+                                    <div className="flex items-center gap-1.5 mb-2">
+                                        {skillIcons[key]}
+                                        <h4 className="text-cyan-300 font-medium text-sm">{skillLabels[key]}</h4>
+                                    </div>
+                                    <div className="flex flex-wrap gap-1">
+                                        {skills.map(skill => (
+                                            <span key={skill} className="bg-cyan-900 text-cyan-200 px-2 py-1 rounded text-xs">
+                                                {skill}
+                                            </span>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                            <div>
-                                <h4 className="text-cyan-300 font-medium text-sm mb-2">AI/ML</h4>
-                                <div className="flex flex-wrap gap-1">
-                                    {techSkills.aiml.map(skill => (
-                                        <span key={skill} className="bg-cyan-900 text-cyan-200 px-2 py-1 rounded text-xs">
-                                            {skill}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                            <div>
-                                <h4 className="text-cyan-300 font-medium text-sm mb-2">Frameworks</h4>
-                                <div className="flex flex-wrap gap-1">
-                                    {techSkills.frameworks.map(skill => (
-                                        <span key={skill} className="bg-cyan-900 text-cyan-200 px-2 py-1 rounded text-xs">
-                                            {skill}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
+                            ))}
                         </div>
                     </div>
 
@@ -187,17 +197,16 @@ const Portfolio = () => {
                         <h2 className="text-xl font-semibold text-cyan-400">Experience</h2>
                     </div>
                     <div className="space-y-6">
-                        {/* Highlight the most recent one */}
                         {experience.map((exp, index) => (
-                            <div key={index} className={`border-l-4 pl-4 pb-4 ${index < 0 ? 'border-b border-gray-800' : ''} ${exp.current ? 'border-cyan-500' : 'border-gray-600'}`}>
+                            <div key={index} className={`border-l-4 pl-4 pb-4 ${exp.current ? 'border-cyan-500' : 'border-gray-600'}`}>
                                 <div className="flex justify-between items-start mb-2">
                                     <div>
                                         <h3 className="font-semibold text-white">{exp.title}</h3>
-                                        <p className={'text-sm font-medium text-cyan-300'}>{exp.company}</p>
+                                        <p className="text-md font-medium text-cyan-300">{exp.company}</p>
                                     </div>
                                     <span className="text-gray-400 text-xs bg-gray-800 px-2 py-1 rounded">{exp.period}</span>
                                 </div>
-                                <ul className="text-gray-300 text-xs space-y-1 list-disc list-inside">
+                                <ul className="text-gray-300 text-sm space-y-1 list-disc list-inside">
                                     {exp.achievements.map((achievement, achieveIndex) => (
                                         <li key={achieveIndex}>{achievement}</li>
                                     ))}
