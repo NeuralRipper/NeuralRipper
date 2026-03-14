@@ -14,6 +14,7 @@ from routes.auth import router as auth_router
 from routes.inference import router as infer_router
 from routes.user import router as user_router
 from routes.model import router as model_router
+from routes.github import router as github_router
 
 
 @asynccontextmanager
@@ -55,6 +56,7 @@ app.include_router(auth_router)
 app.include_router(infer_router)
 app.include_router(user_router)
 app.include_router(model_router)
+app.include_router(github_router)
 
 
 @app.get("/health")

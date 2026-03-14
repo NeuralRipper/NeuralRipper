@@ -128,9 +128,8 @@ export default function Playground() {
 
         {/* Header */}
         <div className="border border-border bg-card px-4 py-3 flex items-center justify-between">
-          <span className="text-lg font-bold text-cyan-400">NEURAL RIPPER</span>
+          <span className="text-xs text-muted-foreground">LLM EVAL LAB v0.1</span>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-muted-foreground">LLM EVAL LAB v0.1</span>
             {loading ? null : user ? (
               <div className="flex items-center gap-2">
                 {user.avatar_url && (

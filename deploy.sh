@@ -71,6 +71,7 @@ export JWT_SECRET_KEY=$(echo "$SECRET_JSON" | jq -r '.JWT_SECRET_KEY')
 export GOOGLE_CLIENT_ID=$(echo "$SECRET_JSON" | jq -r '.GOOGLE_CLIENT_ID')
 export MODAL_TOKEN_ID=$(echo "$SECRET_JSON" | jq -r '.MODAL_TOKEN_ID')
 export MODAL_TOKEN_SECRET=$(echo "$SECRET_JSON" | jq -r '.MODAL_TOKEN_SECRET')
+export GITHUB_API_KEY=$(echo "$SECRET_JSON" | jq -r '.GITHUB_API_KEY')
 
 $DOCKER compose -f docker-compose.prod.yml pull
 $DOCKER compose -f docker-compose.prod.yml up -d --remove-orphans

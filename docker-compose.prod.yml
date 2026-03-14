@@ -25,6 +25,7 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       MODAL_TOKEN_ID: ${MODAL_TOKEN_ID}
       MODAL_TOKEN_SECRET: ${MODAL_TOKEN_SECRET}
+      GITHUB_API_KEY: ${GITHUB_API_KEY}
     depends_on:
       mysql:
         condition: service_healthy

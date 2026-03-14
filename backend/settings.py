@@ -21,3 +21,6 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 # JWT
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev-secret-change-in-prod")
 JWT_ALGORITHM = "HS256"
+
+# Github API 
+GITHUB_API_KEY = os.getenv("GITHUB_API_KEY", "")
