@@ -1,4 +1,5 @@
 import os
+from urllib.parse import quote_plus
 
 # MySQL connection — used by SQLAlchemy async engine
 # Format: user:password@host:port/database
@@ -8,7 +9,7 @@ MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
 MYSQL_PORT = os.getenv("MYSQL_PORT", "3306")
 MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "neuralripper")
 
-DATABASE_URL = f"{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DATABASE}"
+DATABASE_URL = f"{quote_plus(MYSQL_USER)}:{quote_plus(MYSQL_PASSWORD)}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DATABASE}"
 
 DATABASE_POOLSIZE = 10
 DATABASE_MAX_OVERFLOW = 10

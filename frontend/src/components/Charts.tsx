@@ -101,8 +101,8 @@ export default function Charts({ rows }: { rows: ChartRow[] }) {
                     })}
                 </div>
                 <Legend items={[
-                    { style: barStyles.ttft, label: "TTFT" },
-                    { style: barStyles.decode, label: "Decode" },
+                    { style: barStyles.ttft, label: "TTFT", tooltip: "Time to First Token — initial response latency" },
+                    { style: barStyles.decode, label: "Decode", tooltip: "Token generation time after first token" },
                 ]} />
             </div>
 
@@ -149,8 +149,8 @@ export default function Charts({ rows }: { rows: ChartRow[] }) {
                     })}
                 </div>
                 <Legend items={[
-                    { style: barStyles.vram, label: "VRAM" },
-                    { style: barStyles.gpu, label: "GPU" },
+                    { style: barStyles.vram, label: "VRAM", tooltip: "GPU video memory consumed by the model" },
+                    { style: barStyles.gpu, label: "GPU", tooltip: "GPU compute utilization during inference" },
                 ]} />
             </div>
         </div>
@@ -174,13 +174,20 @@ function BarRow({ label, children }: { label: string; children: React.ReactNode 
     )
 }
 
-function Legend({ items }: { items: { style: React.CSSProperties; label: string }[] }) {
+function Legend({ items }: { items: { style: React.CSSProperties; label: string; tooltip?: string }[] }) {
     return (
         <div className="flex gap-4 text-[10px] text-muted-foreground mt-1.5 ml-20">
             {items.map(item => (
-                <span key={item.label} className="flex items-center gap-1">
+                <span key={item.label} className="flex items-center gap-1 group/legend relative">
                     <span className="inline-block w-3 h-2 rounded-sm border border-white/10" style={item.style} />
-                    {item.label}
+                    <span className={item.tooltip ? "border-b border-dotted border-muted-foreground/40" : ""}>
+                        {item.label}
+                    </span>
+                    {item.tooltip && (
+                        <div className="absolute hidden group-hover/legend:block bottom-full left-0 mb-1 px-2 py-1 text-[10px] bg-zinc-900 border border-border text-muted-foreground whitespace-nowrap z-50 pointer-events-none">
+                            {item.tooltip}
+                        </div>
+                    )}
                 </span>
             ))}
         </div>

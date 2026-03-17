@@ -17,6 +17,15 @@ interface MetricsRow {
     result: InferenceResultResponse
 }
 
+const COLUMN_TOOLTIPS: Record<string, string> = {
+    ttft: "Time to First Token — how fast the model starts responding",
+    tpot: "Time Per Output Token — average decode latency per token",
+    speed: "Generation throughput — tokens produced per second",
+    e2e: "End-to-End latency — total time from prompt to completion",
+    gpu: "GPU compute utilization during inference",
+    vram: "Video memory consumed by the model",
+}
+
 const columns: ColumnDef<MetricsRow>[] = [
     {
         accessorFn: r => r.name, id: "model", header: "Model",
@@ -84,16 +93,26 @@ export default function MetricsTable({ rows }: { rows: MetricsRow[] }) {
             <TableHeader>
                 {table.getHeaderGroups().map(hg => (
                     <TableRow key={hg.id}>
-                        {hg.headers.map(header => (
-                            <TableHead
-                                key={header.id}
-                                className="cursor-pointer select-none text-xs"
-                                onClick={header.column.getToggleSortingHandler()}
-                            >
-                                {flexRender(header.column.columnDef.header, header.getContext())}
-                                {{ asc: " ▲", desc: " ▼" }[header.column.getIsSorted() as string] ?? ""}
-                            </TableHead>
-                        ))}
+                        {hg.headers.map(header => {
+                            const tooltip = COLUMN_TOOLTIPS[header.id]
+                            return (
+                                <TableHead
+                                    key={header.id}
+                                    className="cursor-pointer select-none text-xs group/th relative"
+                                    onClick={header.column.getToggleSortingHandler()}
+                                >
+                                    <span className={tooltip ? "border-b border-dotted border-muted-foreground/40" : ""}>
+                                        {flexRender(header.column.columnDef.header, header.getContext())}
+                                    </span>
+                                    {{ asc: " ▲", desc: " ▼" }[header.column.getIsSorted() as string] ?? ""}
+                                    {tooltip && (
+                                        <div className="absolute hidden group-hover/th:block top-full left-0 mt-1 px-2 py-1 text-[10px] bg-zinc-900 border border-border text-muted-foreground whitespace-nowrap z-50 pointer-events-none">
+                                            {tooltip}
+                                        </div>
+                                    )}
+                                </TableHead>
+                            )
+                        })}
                     </TableRow>
                 ))}
             </TableHeader>

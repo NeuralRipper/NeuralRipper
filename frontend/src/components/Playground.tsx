@@ -8,7 +8,7 @@ import type { ModelResponse, InferenceResultResponse } from "@/types"
 import PromptCard from "./PromptCard"
 import MetricsTable from "./MetricsTable"
 import Charts from "./Charts"
-import EXAMPLE_RESULTS from "./ExampleResults"
+import { useDemoAnimation } from "@/hooks/useDemoAnimation"
 
 
 
@@ -41,9 +41,21 @@ export default function Playground() {
   const [recoveredResults, setRecoveredResults] = useState<Map<number, InferenceResultResponse> | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const hasAutoSelected = useRef(false)
   const { inferenceResults, isComplete, error, cancel, resetSocket } = useInferenceSocket(sessionId)
 
   useEffect(() => { listModels().then(setModels).catch(console.error) }, [])
+
+  // Pre-select ~1.5B models from different vendors on first load
+  useEffect(() => {
+    if (models.length === 0 || hasAutoSelected.current) return
+    const preSelectNames = ["Qwen2.5-1.5B-Instruct", "DeepSeek-R1-Distill-1.5B", "SmolLM2-1.7B"]
+    const ids = models.filter(m => preSelectNames.includes(m.name)).map(m => m.id)
+    if (ids.length > 0) {
+      setSelectedIds(ids)
+      hasAutoSelected.current = true
+    }
+  }, [models])
 
   // Recover last session from DB on mount (when user is available)
   useEffect(() => {
@@ -108,11 +120,15 @@ export default function Playground() {
 
   const running = sessionId !== null && !isComplete
 
-  // Use live results if streaming, recovered results if page was refreshed, else example
+  // Use live results if streaming, recovered results if page was refreshed
   const displayResults = inferenceResults.size > 0 ? inferenceResults : recoveredResults
   const hasResults = displayResults !== null && displayResults.size > 0
 
-  // Build metrics rows
+  // Animated demo for new / idle users
+  const showDemo = !hasResults && !running
+  const demoRows = useDemoAnimation(showDemo)
+
+  // Build metrics rows — live results or animated demo
   const metricsRows = hasResults
     ? Array.from(displayResults!.entries())
       .filter(([, r]) => r.status === "streaming" || r.status === "completed" || r.status === "failed")
@@ -120,7 +136,7 @@ export default function Playground() {
         name: models.find(m => m.id === modelId)?.name ?? `Model ${modelId}`,
         result,
       }))
-    : EXAMPLE_RESULTS.map(ex => ({ name: ex.name, result: ex.result }))
+    : demoRows.filter(r => r.result.status !== "pending")
 
   return (
     <div className="min-h-screen bg-background text-foreground p-4">
@@ -245,11 +261,15 @@ export default function Playground() {
                     />
                   </div>
                 ))
-                : !running && (
+                : showDemo && demoRows.length > 0 && (
                   <>
-                    {EXAMPLE_RESULTS.map((ex, i) => (
-                      <div key={i} className="flex-1 min-h-0 opacity-50">
-                        <PromptCard result={ex.result} name={ex.name} />
+                    {demoRows.map((ex, i) => (
+                      <div key={i} className="flex-1 min-h-0 opacity-60">
+                        <PromptCard
+                          result={ex.result}
+                          name={ex.name}
+                          streaming={ex.result.status === "streaming"}
+                        />
                       </div>
                     ))}
                   </>
@@ -265,8 +285,8 @@ export default function Playground() {
                   onChange={e => setPrompt(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit() } }}
                   disabled={running}
-                  rows={2}
-                  placeholder="Enter your prompt..."
+                  rows={3}
+                  placeholder={"1. Select models above\n2. Pick a GPU tier\n3. Type your prompt here and press Enter"}
                   className="flex-1 bg-transparent text-yellow-400 outline-none resize-none placeholder:text-muted-foreground disabled:opacity-50"
                 />
               </div>
