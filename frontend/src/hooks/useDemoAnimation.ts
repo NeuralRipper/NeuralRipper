@@ -18,8 +18,8 @@ const BLANK_METRICS: Partial<InferenceResultResponse> = {
 
 export function useDemoAnimation(active: boolean) {
     const [rows, setRows] = useState(EXAMPLE_RESULTS)
-    const intervalRef = useRef<ReturnType<typeof setInterval>>()
-    const timeoutRef = useRef<ReturnType<typeof setTimeout>>()
+    const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
     const startRef = useRef(0)
 
     useEffect(() => {
