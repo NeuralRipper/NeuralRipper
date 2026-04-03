@@ -127,7 +127,7 @@ resource "null_resource" "redeploy" {
       "export IMAGE_TAG=${var.image_tag}",
       "export ECR_URL=${var.aws_account_id}.dkr.ecr.${var.aws_region}.amazonaws.com",
       "aws ecr get-login-password --region $AWS_REGION | sudo docker login --username AWS --password-stdin $ECR_URL",
-      "cd /app && sudo -E docker compose pull && sudo -E docker compose up -d --remove-orphans",
+      "cd /app && sudo docker compose pull && sudo docker compose up -d --remove-orphans",
       "echo 'Redeployed with IMAGE_TAG=${var.image_tag}'"
     ]
   }
