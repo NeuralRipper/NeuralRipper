@@ -17,6 +17,7 @@ services:
 
   backend:
     image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/neuralripper-backend:${IMAGE_TAG:-latest}
+    platform: linux/amd64
     build:
       context: backend/
       dockerfile: Dockerfile
@@ -39,6 +40,7 @@ services:
 
   frontend:
     image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/neuralripper-frontend:${IMAGE_TAG:-latest}
+    platform: linux/amd64
     build:
       context: .
       dockerfile: Dockerfile.frontend
