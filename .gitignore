@@ -184,3 +184,5 @@ checkpoints/
 
 # MLFlow output
 mlruns/
+# Deploy env (contains credentials)
+.env.deploy

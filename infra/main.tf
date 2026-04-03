@@ -106,7 +106,7 @@ resource "aws_eip_association" "app" {
 
 resource "null_resource" "redeploy" {
   triggers = {
-    image_tag = var.image_tag
+    always_run = timestamp()
   }
 
   depends_on = [aws_instance.app, aws_eip_association.app]
